@@ -185,88 +185,60 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 			hashCallbackKey;
 
 		/*
-		 * define hash observer
+		 * define hash change handler
 		 */
-		(function( callback ){
-			// hash event supported browser
-			if('onhashchange' in window) {
-				$(window).bind( 'hashchange', function(){
-					// for double setView()
-					if( !hashCallbackKey ){
-						hashCallbackKey = setTimeout( function(){ callback( prepareHash() ); } , 0 );
-					}
-				});
-
-				// initial attack
-				callback( prepareHash() );
+		self.hashchange( function(){
+			var hash = prepareHash();
+			
+			if ( self.data( 'freeze' ) ) {
+				return;
 			}
 
-			// generic browser
-			else {
-				var prev;
-				$.polling( function(){
-					var hash = prepareHash();
-					if( prev !== hash ){
-						prev = hash;
-						callback( hash );
-					}
-				} ).wakeup();
+			// main
+			hashCallbackKey = null;
+
+			// closure
+			var i, viewName, query;
+
+			// viewdeactivate
+			for( i = 0; i < prevViews.length; i++ ){
+				viewName = prevViews[i].split('|')[0];
+				self.getView(viewName).trigger('_viewdeactivate');
 			}
-		})(
-			/*
-			 * define hash change callback
-			 */
-			function( hash ){
-				if ( self.data( 'freeze' ) ) {
-					return;
+
+			// viewactivate and viewrender
+			var views = hash.split('/');
+			for( i = 0; i < views.length; i++ ){
+
+				if( !views[i] ){
+					views.splice( i , 1 );
+					i--;
+					continue;
 				}
 
-				// main
-				hashCallbackKey = null;
+				viewName = views[i].split('|')[0];
+				query = views[i].split('|')[1] || '';
+				query = decodeURIComponent( query );
 
-				// closure
-				var i, viewName, query;
-
-				// viewdeactivate
-				for( i = 0; i < prevViews.length; i++ ){
-					viewName = prevViews[i].split('|')[0];
-					self.getView(viewName).trigger('_viewdeactivate');
+				var tempQuery;
+				try {
+					tempQuery = JSON.parse(  query  );
 				}
-
-				// viewactivate and viewrender
-				var views = hash.split('/');
-				for( i = 0; i < views.length; i++ ){
-
-					if( !views[i] ){
-						views.splice( i , 1 );
-						i--;
-						continue;
-					}
-
-					viewName = views[i].split('|')[0];
-					query = views[i].split('|')[1] || '';
-					query = decodeURIComponent( query );
-
-					var tempQuery;
-					try {
-						tempQuery = JSON.parse(  query  );
-					}
-					catch ( e ) {
-						tempQuery = query;
-					}
-					query = tempQuery;
-
-					self.getView(viewName).trigger('_viewactivate' , viewName);
-					self.getView(viewName).trigger('_viewrender' , query );
+				catch ( e ) {
+					tempQuery = query;
 				}
+				query = tempQuery;
 
-				// current 2 prev
-				prevViews = views;
-
-				// fire hash change
-				self.trigger( 'viewchange' , views );
+				self.getView(viewName).trigger('_viewactivate' , viewName);
+				self.getView(viewName).trigger('_viewrender' , query );
 			}
-		);
+
+			// current 2 prev
+			prevViews = views;
+
+			// fire hash change
+			self.trigger( 'viewchange' , views );
+		} );
 
 		return self;
 	};
