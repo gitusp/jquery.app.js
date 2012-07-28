@@ -4,115 +4,18 @@
  * Copyright 2012, usp
  * Dual licensed under the MIT or GPL Version 2 licenses.
  *
+ * The library requires jquery.event.pre.js
+ * https://github.com/uspDev/jquery.event.pre.js
+ *
+ * The library requires jquery-ba-hashchange-js
+ * http://benalman.com/code/projects/jquery-hashchange/docs/files/jquery-ba-hashchange-js.html
+ * thanks!!
  */
-
-/*
- * pre event support
- */
-(function(){
-	var dispatch = $.event.dispatch;
-
-	$.event.dispatch = function( event ){
-		event = jQuery.event.fix( event || window.event );
-		event[ jQuery.expando ] = true;
-		arguments[0] = event;
-
-		event.type = 'pre' + event.type;
-		dispatch.apply( this , arguments );
-
-		event.type = event.type.substr(3);
-		return dispatch.apply( this , arguments );
-	};
-})();
 
 /*
  * special event register
  */
 $.event.special.viewrender = $.event.special.viewactivate = $.event.special.viewdeactivate = { noBubble : true };
-
-/*
- * report
- */
-$.report = function( api ){
-	window.onerror = ( function( onerror ){
-		return function( message , filename , lineno ){
-			(new Image).src =
-				api +
-				'?filename=' + encodeURIComponent(filename) +
-				'&message=' + encodeURIComponent(message) +
-				'&lineno=' + encodeURIComponent(lineno);
-
-			return onerror.apply( this , arguments );
-		}
-	} )( window.onerror || $.noop );
-};
-
-/*
- * define polling
- */
-$.polling = function( callback , interval ){
-	var key;
-
-	return {
-		wakeup : function(){
-			clearInterval(key);
-			key = setInterval(callback, interval||100);
-		},
-		sleep : function(){
-			clearInterval(key);
-		}
-	};
-};
-
-/*
- * define compare
- */
-$.compare=function(i1, i2){
-	// array
-	if( $.isArray( i1 )){
-		if( !$.isArray( i2 ) )					return false;
-		if( i1.length !== i2.length)			return false;
-		for( var i = 0; i < i1.length; i++ ){
-			if( !$.compare( i1[i] , i2[i] ) )	return false;
-		}
-												return true;
-	}
-
-	// plain object
-	else if( $.isPlainObject( i1 )){
-		if( !$.isPlainObject( i2 ) )			return false;
-
-		var valid = true;
-		$.each(i1, function(k, v){
-			if(!$.compare(v, i2[k])){
-				return valid=false;
-			}
-		});
-		if(!valid)								return false;
-
-		$.each(i2, function(k, v){
-			if(!$.compare(v, i1[k])){
-				return valid=false;
-			}
-		});
-												return valid;
-	}
-
-	// the other object or primitive
-	else{
-		if(i1 !== i2)							return false;
-												return true;
-	}
-};
-
-/*
- * define cut
- */
-$.fn.cut = function() {
-	return this.each(function(){
-		if(this.parentNode) this.parentNode.removeChild( this );
-	});
-};
 
 /*
  * define view
@@ -240,7 +143,6 @@ $.fn.cut = function() {
 			}
 		}
 	};
-
 })();
 
 /*
@@ -484,5 +386,4 @@ $.fn.cut = function() {
 			return window.location.hash = hash;
 		}
 	};
-
 })();
