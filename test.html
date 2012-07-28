@@ -8,18 +8,107 @@ html , body {
 	padding: 0;
 	margin: 0;
 	height: 100%;
+	font-size: 12px;
 }
 body {
 	background: #f7f7f7;
+}
+
+a {
+	-webkit-transition: .3s;
+	cursor: pointer;
+}
+a:hover {
+	background: #fee;
+}
+
+#viewA ,
+#viewB ,
+#viewC 
+{
+	background: #fff;
+	-webkit-box-shadow: rgba( 0 , 0 , 0 , .1 );
+	width: 200px;
+	height: 200px;
+	text-align: center;
+	line-height: 200px;
+	position: absolute;
+	left: 20px;
+}
+#viewA {
+	top: 40px;
+}
+#viewB {
+	top: 240px;
+}
+#viewC {
+	top: 440px;
 }
 </style>
 </head>
 <body>
 
+<a>viewA</a>
+<a>viewB</a>
+<a>viewC</a>
+
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
 <script src="lib/jquery.ba-hashchange.min.js"></script>
+<script src="lib/jquery.cut.js"></script>
 <script src="lib/jquery.event.pre.js"></script>
 <script src="jquery.app.js"></script>
 <script>
+
+
+var app = $( window ).app(),
+	viewA = (function(){
+		var v = $( '<div id="viewA">viewA</div>' ).view();
+		app.addView( 'viewA' , v , 'main' );
+
+		v.bind( 'viewactivate' , function( e ){
+			$( document.body ).append( v );
+		} );
+		v.bind( 'viewdeactivate' , function( e ){
+			v.hide();
+		} );
+
+		return v;
+	})(),
+	viewB = (function(){
+		var v = $( '<div id="viewB">viewB</div>' ).view();
+		app.addView( 'viewB' , v , 'main' );
+		v.require( 'viewC' );
+
+		v.bind( 'viewactivate' , function( e ){
+			$( document.body ).append( v );
+		} );
+		v.bind( 'viewdeactivate' , function( e ){
+			v.hide();
+		} );
+
+		return v;
+	})(),
+	viewC = (function(){
+		var v = $( '<div id="viewC">viewC</div>' ).view();
+		app.addView( 'viewC' , v , 'sub' );
+
+		v.bind( 'viewactivate' , function( e ){
+			$( document.body ).append( v );
+		} );
+		v.bind( 'viewdeactivate' , function( e ){
+			v.hide();
+		} );
+
+		return v;
+	})();
+
+// bind controller
+$( 'a' ).click( function( e ){
+	var that = $( this );
+	app.renderView( that.html() );
+} );
+
+// start app
+app.pump();
 </script>
 </html>

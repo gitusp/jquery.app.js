@@ -188,8 +188,7 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 		 * define hash change handler
 		 */
 		self.hashchange( function(){
-			var hash = prepareHash();
-			
+			// freeze or not
 			if ( self.data( 'freeze' ) ) {
 				return;
 			}
@@ -198,7 +197,7 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 			hashCallbackKey = null;
 
 			// closure
-			var i, viewName, query;
+			var i, viewName, query, hash = prepareHash();
 
 			// viewdeactivate
 			for( i = 0; i < prevViews.length; i++ ){
@@ -239,6 +238,9 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 			// fire hash change
 			self.trigger( 'viewchange' , views );
 		} );
+
+		// initialize
+		self.hashchange();
 
 		return self;
 	};
