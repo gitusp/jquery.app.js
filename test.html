@@ -69,7 +69,7 @@ var app = $( window ).app(),
 			$( document.body ).append( v );
 		} );
 		v.bind( 'viewdeactivate' , function( e ){
-			v.hide();
+			v.cut();
 		} );
 
 		return v;
@@ -83,7 +83,7 @@ var app = $( window ).app(),
 			$( document.body ).append( v );
 		} );
 		v.bind( 'viewdeactivate' , function( e ){
-			v.hide();
+			v.cut();
 		} );
 
 		return v;
@@ -96,7 +96,7 @@ var app = $( window ).app(),
 			$( document.body ).append( v );
 		} );
 		v.bind( 'viewdeactivate' , function( e ){
-			v.hide();
+			v.cut();
 		} );
 
 		return v;
@@ -104,8 +104,15 @@ var app = $( window ).app(),
 
 // bind controller
 $( 'a' ).click( function( e ){
-	var that = $( this );
-	app.renderView( that.html() );
+	var that = $( this ),
+		name = that.html(),
+		view = app.getView( name );
+	if ( view.is( ':visible' ) ) {
+		app.deactivateView( name );
+	}
+	else {
+		app.renderView( name );
+	}
 } );
 
 // start app
