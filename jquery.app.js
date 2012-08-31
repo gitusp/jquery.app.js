@@ -193,56 +193,69 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 				return;
 			}
 
-			// main
-			hashCallbackKey = null;
-
-			// closure
-			var i, viewName, query, hash = prepareHash();
-
-			// viewdeactivate
-			for( i = 0; i < prevViews.length; i++ ){
-				viewName = prevViews[i].split('|')[0];
-				self.getView(viewName).trigger('_viewdeactivate');
+			// is doubled?
+			if (!hashCallbackKey) {
+				hashCallbackKey = setTimeout(function()
+					{
+						handleHash(prepareHash());
+					}, 0);
 			}
-
-			// viewactivate and viewrender
-			var views = hash.split('/');
-			for( i = 0; i < views.length; i++ ){
-
-				if( !views[i] ){
-					views.splice( i , 1 );
-					i--;
-					continue;
-				}
-
-				viewName = views[i].split('|')[0];
-				query = views[i].split('|')[1] || '';
-				query = decodeURIComponent( query );
-
-				var tempQuery;
-				try {
-					tempQuery = JSON.parse(  query  );
-				}
-				catch ( e ) {
-					tempQuery = query;
-				}
-				query = tempQuery;
-
-				self.getView(viewName).trigger('_viewactivate' , viewName);
-				self.getView(viewName).trigger('_viewrender' , query );
-			}
-
-			// current 2 prev
-			prevViews = views;
-
-			// fire hash change
-			self.trigger( 'viewchange' , views );
 		} );
 
 		// initialize
 		self.hashchange();
 
+		// return myself
 		return self;
+
+		// hash handler
+		function handleHash(hash)
+			{
+				// main
+				hashCallbackKey = null;
+
+				// closure
+				var i, viewName, query;
+
+				// viewdeactivate
+				for( i = 0; i < prevViews.length; i++ ){
+					viewName = prevViews[i].split('|')[0];
+					self.getView(viewName).trigger('_viewdeactivate');
+				}
+
+				// viewactivate and viewrender
+				var views = hash.split('/');
+				for( i = 0; i < views.length; i++ ){
+
+					if( !views[i] ){
+						views.splice( i , 1 );
+						i--;
+						continue;
+					}
+
+					viewName = views[i].split('|')[0];
+					query = views[i].split('|')[1] || '';
+					query = decodeURIComponent( query );
+
+					var tempQuery;
+					try {
+						tempQuery = JSON.parse(  query  );
+					}
+					catch ( e ) {
+						tempQuery = query;
+					}
+					query = tempQuery;
+
+					self.getView(viewName).trigger('_viewactivate' , viewName);
+					self.getView(viewName).trigger('_viewrender' , query );
+				}
+
+				// current 2 prev
+				prevViews = views;
+
+				// fire hash change
+				self.trigger( 'viewchange' , views );
+			}
 	};
 
 	// hash setter
