@@ -4,9 +4,6 @@
  * Copyright 2012, usp
  * Dual licensed under the MIT or GPL Version 2 licenses.
  *
- * The library requires jquery.event.pre.js
- * https://github.com/uspDev/jquery.event.pre.js
- *
  * The library requires jquery-ba-hashchange-js
  * http://benalman.com/code/projects/jquery-hashchange/docs/files/jquery-ba-hashchange-js.html
  * thanks!!
@@ -15,11 +12,14 @@
 /*
  * special event register
  */
-$.event.special.viewrender = $.event.special.viewactivate = $.event.special.viewdeactivate = { noBubble : true };
+$.event.special.viewrender = $.event.special.viewactivate = $.event.special.viewdeactivate = {noBubble : true};
 
 var app = (function (app)
 	{
-		var views = {};
+		var views = {},
+			prevViews = [],
+			hashKey;
+
 		app.extend({
 			/** 
 			 * add view
@@ -30,15 +30,130 @@ var app = (function (app)
 			 */
 			addView : function (name, view, group)
 				{
-					view.data('viewName', name);
-					view.data('viewGroup', group);
-					
+					// closures for view
+					var requires = [];
+						viewdeactivateKey = null,
+						viewactivateKey = null,
+						viewrenderKey = null,
+						viewdeactivateCancel = false;
+
+					// register view
 					if (views[name]){
 						throw('view name ' + name + ' already exists.');
 					} else {
 						views[name] = view;
 					}
+
+					// expand view
+					view.extend({
+						/** 
+						 * config or get require
+						 * @param {String?} name the view name
+						 * @returns {jQuery?} viewself
+						 */
+						require : function (name)
+							{
+								if (name === undefined) {
+									return requires;
+								} else {
+									requires.push(name);
+									return view;
+								}
+							},
+
+						/** 
+						 * getter of group
+						 * @returns {String} his group
+						 */
+						getGroup : function ()
+							{
+								return group;
+							},
+
+						deactivate : function ()
+							{
+								if (viewdeactivateKey) {
+									return;
+								}
+								viewdeactivateKey = setTimeout( viewdeactivate, 0 );
+
+								for(var i = 0; i < requires.length; i++ ){
+									app.getView( requires[i] ).deactivate();
+								}
+							},
+						activate : function (name)
+							{
+								if (viewactivateKey) {
+									return;
+								}
+
+								var cancel,
+									i = 0;
+								for(; i < requires.length; i++ ){
+									app.getView( requires[i] ).activate(name);
+								}
+								if (viewdeactivateKey) {
+									cancel = viewdeactivateCancel = true;
+								}
+								viewactivateKey = setTimeout(function ()
+									{
+										viewactivate(name, cancel);
+									}, 0);
+							},
+						render : function (query)
+							{
+								if (viewrenderKey) {
+									return;
+								}
+								viewrenderKey = setTimeout(function()
+									{
+										viewrender(query);
+									}, 0 );
+							}
+					});
+
+					// default handler of view
+					self.bind( 'viewrender' , function( e , query ){
+						var originalQuery;
+
+						if ( $.isPlainObject( query ) ) {
+							originalQuery = $.extend( true , {} , query );
+						}
+						else if ( $.isArray( query ) ) {
+							originalQuery = $.extend( true , [] , query );
+						}
+						else {
+							originalQuery = query;
+						}
+						
+						setTimeout( function(){
+							self.data( 'lastQuery' , originalQuery );
+						} , 0 );
+					} );
+
 					return app;
+
+					function viewdeactivate(){
+						viewdeactivateKey=null;
+						if( !viewdeactivateCancel ){
+							view.trigger( 'viewdeactivate' );
+						}
+						viewdeactivateCancel = false;
+					}
+
+					// internal viewactivate
+					function viewactivate( name , cancel ){
+						viewactivateKey=null;
+						if( !cancel ){
+							view.trigger( 'viewactivate' , name );
+						}
+					}
+
+					// internal viewrender
+					function viewrender( query ){
+						viewrenderKey=null;
+						view.trigger( 'viewrender' , query );
+					}
 				},
 
 			/** 
@@ -56,7 +171,7 @@ var app = (function (app)
 				},
 
 			/** 
-			 * get view
+			 * prepare hash
 			 * @param {String} name view name
 			 * @param {Object} query passed to view
 			 * @returns {jQuery} appself
@@ -64,7 +179,7 @@ var app = (function (app)
 			prepare : function (name, query)
 				{
 					var viewName,
-						group = app.getView(name).data('viewGroup'),
+						group = app.getView(name).getGroup(),
 						viewPrototype = hash().split('/'),
 						i = 0;
 
@@ -75,7 +190,6 @@ var app = (function (app)
 
 					// remove exclusive
 					for (; i < viewPrototype.length; i++) {
-
 						if( !viewPrototype[i] ){
 							viewPrototype.splice( i , 1 );
 							i--;
@@ -83,7 +197,7 @@ var app = (function (app)
 						}
 
 						viewName = viewPrototype[i].split('|')[0];
-						if( self.getView( viewName ).data( 'viewGroup' ) === group ){
+						if( app.getView( viewName ).getGroup() === group ){
 							viewPrototype.splice( i , 1 );
 							i--;
 						}
@@ -101,20 +215,18 @@ var app = (function (app)
 				},
 
 			/** 
-			 * get view
+			 * remove view
 			 * @param {String} name view name
 			 * @returns {jQuery} appself
 			 */
-			deactivateView : function (name)
+			remove : function (name)
 				{
-					var self = this,
-						viewName,
+					var viewName,
 						viewPrototype = prepareHash().split('/'),
 						i;
 
 					// remove matched view
 					for( i = 0; i < viewPrototype.length; i++ ){
-
 						if( !viewPrototype[i] ){
 							viewPrototype.splice( i , 1 );
 							i--;
@@ -133,11 +245,78 @@ var app = (function (app)
 
 					return app;
 				},
+
+			/** 
+			 * render views
+			 * @returns {jQuery} appself
+			 */
+			render : function ()
+				{
+					var i,
+						viewName,
+						query;
+
+					// viewdeactivate
+					for( i = 0; i < prevViews.length; i++ ){
+						viewName = prevViews[i].split('|')[0];
+						app.getView(viewName).deactivate();
+						//self.getView(viewName).trigger('_viewdeactivate');
+					}
+
+					// viewactivate and viewrender
+					var views = hash().split('/');
+					for( i = 0; i < views.length; i++ ){
+
+						if( !views[i] ){
+							views.splice( i , 1 );
+							i--;
+							continue;
+						}
+
+						viewName = views[i].split('|')[0];
+						query = views[i].split('|')[1] || '';
+						query = decodeURIComponent( query );
+
+						var tempQuery;
+						try {
+							tempQuery = JSON.parse(  query  );
+						}
+						catch ( e ) {
+							tempQuery = query;
+						}
+						query = tempQuery;
+
+						app.getView(viewName).activate(viewName);
+						app.getView(viewName).render(query);
+						//self.getView(viewName).trigger('_viewactivate' , viewName);
+						//self.getView(viewName).trigger('_viewrender' , query );
+					}
+
+					// current 2 prev
+					prevViews = views;
+
+					return app;
+				},
 		});
+
+		// default event binding
+		// NOTE: normally we bind app.render to viewchange evnet
+		app.hashchange(function ()
+			{
+				clearTimeout(hashKey);
+				hashKey = setTimeout(function ()
+					{
+						app.trigger('viewchange');
+					}, 0);
+			});
 
 		return app;
 
-		// hash handler
+		/** 
+		 * handle hash
+		 * @param {String} hash if be feed then set hash, or return hash
+		 * @returns {String?} current hash
+		 */
 		function hash(hash)
 		{
 			if (hash === undefined) {
@@ -148,248 +327,26 @@ var app = (function (app)
 				window.location.hash = hash;
 			}
 		}
-	})($(window));
 
-/*
- * define view
- */
-(function(){
-	var view = $.sub();
-	$.sub.view = view;
-
-	// 依存ビューを追加
-	view.fn.require = function( view ){
-		var requires = this.data('requires');
-		requires.push( view );
-		return this;
-	};
-
-	// express internal view
-	$.fn.view = function(){
-		// once
-		if ( this.data( 'viewExpando' ) ) {
-			return this;
-		}
-		else {
-			this.data( 'viewExpando' , true );
-		}
-
-		// closure
-		var self = this,
-			viewdeactivateKey = null,
-			viewactivateKey = null,
-			viewrenderKey = null,
-			viewdeactivateCancel = false;
-
-		// viewize
-		if ( !( self instanceof view ) ) {
-			self = view( this );
-		}
-
-		// init member
-		self.data('requires', []);
-
-		// bind internal viewdeactivate
-		self.bind('pre_viewdeactivate', function( e ){
-			if( viewdeactivateKey ) e.stopPropagation();
-		});
-		self.bind('_viewdeactivate', function( e ){
-			e.stopPropagation();
-			viewdeactivateKey = setTimeout( viewdeactivate, 0 );
-			eventDist.call( self , e.type );
-		});
-
-		// bind internal viewactivate
-		self.bind('pre_viewactivate', function( e ){
-			if( viewactivateKey ) e.stopPropagation();
-		});
-		self.bind('_viewactivate', function( e , viewName ){
-			e.stopPropagation();
-			eventDist.call( self , e.type , viewName );
-			if( viewdeactivateKey )	viewdeactivateCancel = true;
-			var arg = [ viewName , viewdeactivateCancel ];
-			viewactivateKey = setTimeout( function(){ viewactivate.apply( this , arg ); }, 0 );
-		});
-		
-		// bind internal viewrender
-		self.bind('pre_viewrender', function( e , query ){
-			if( viewrenderKey ) e.stopPropagation();
-		});
-		self.bind('_viewrender', function( e , query ){
-			e.stopPropagation();
-			var args = [ query ];
-			viewrenderKey = setTimeout( function(){ viewrender.apply( this , args ); }, 0 );
-		});
-
-		// default handler
-		self.bind( 'previewrender' , function( e , query ){
-			var originalQuery;
-
-			if ( $.isPlainObject( query ) ) {
-				originalQuery = $.extend( true , {} , query );
-			}
-			else if ( $.isArray( query ) ) {
-				originalQuery = $.extend( true , [] , query );
-			}
-			else {
-				originalQuery = query;
-			}
-			
-			setTimeout( function(){
-				self.data( 'lastQuery' , originalQuery );
-			} , 0 );
-		} );
-
-		// express self
-		return self;
-
-		// internal viewdeactivate
-		function viewdeactivate(){
-			viewdeactivateKey=null;
-			if( !viewdeactivateCancel ){
-				self.trigger( 'viewdeactivate' );
-			}
-			viewdeactivateCancel = false;
-		}
-
-		// internal viewactivate
-		function viewactivate( viewName , cancel ){
-			viewactivateKey=null;
-			if( !cancel ){
-				self.trigger( 'viewactivate' , viewName );
-			}
-		}
-
-		// internal viewrender
-		function viewrender( query ){
-			viewrenderKey=null;
-			self.trigger( 'viewrender' , query );
-		}
-		
-		// event dist
-		function eventDist(){
-			var requires = this.data('requires'),
-				app = this.data('app');
-			for( var i = 0; i < requires.length; i++ ){
-				var view = app.getView( requires[i] );
-				view.trigger.apply( view , arguments );
-			}
-		}
-	};
-})();
-
-/*
- * define app
- */
-(function(){
-	var app = $.sub();
-
-	// add view and set me
-
-	// start messsage pump
-	app.fn.pump = function(){
-		var self = this,
-			prevViews = [],
-			hashCallbackKey;
-
-		/*
-		 * define hash change handler
+		/** 
+		 * find required view
+		 * @param {String} needle view name
+		 * @param {String} haystack current evaled name
+		 * @returns {Boolean?} deps
 		 */
-		self.hashchange( function(){
-			// freeze or not
-			if ( self.data( 'freeze' ) ) {
-				return;
-			}
+		function findRequiredView( needle , haystack )
+		{
+			if( needle === haystack ) return true;
 
-			// is doubled?
-			if (!hashCallbackKey) {
-				hashCallbackKey = setTimeout(function()
-					{
-						handleHash(prepareHash());
-					}, 0);
-			}
-		} );
+			var requires = app.getView( haystack ).require(),
+				i = 0;
 
-		// initialize
-		self.hashchange();
-
-		// return myself
-		return self;
-
-		// hash handler
-		function handleHash(hash)
-			{
-				// main
-				hashCallbackKey = null;
-
-				// closure
-				var i, viewName, query;
-
-				// viewdeactivate
-				for( i = 0; i < prevViews.length; i++ ){
-					viewName = prevViews[i].split('|')[0];
-					self.getView(viewName).trigger('_viewdeactivate');
+			for(; i < requires.length; i++ ){
+				if( findRequiredView.call( this , needle , requires[i] ) ){
+					return true;
 				}
-
-				// viewactivate and viewrender
-				var views = hash.split('/');
-				for( i = 0; i < views.length; i++ ){
-
-					if( !views[i] ){
-						views.splice( i , 1 );
-						i--;
-						continue;
-					}
-
-					viewName = views[i].split('|')[0];
-					query = views[i].split('|')[1] || '';
-					query = decodeURIComponent( query );
-
-					var tempQuery;
-					try {
-						tempQuery = JSON.parse(  query  );
-					}
-					catch ( e ) {
-						tempQuery = query;
-					}
-					query = tempQuery;
-
-					self.getView(viewName).trigger('_viewactivate' , viewName);
-					self.getView(viewName).trigger('_viewrender' , query );
-				}
-
-				// current 2 prev
-				prevViews = views;
-
-				// fire hash change
-				self.trigger( 'viewchange' , views );
 			}
-	};
 
-
-	
-	// freeze and unfreeze app
-	app.fn.freeze = function(){
-		this.data( 'freeze' , true );
-	};
-	app.fn.unfreeze = function(){
-		this.data( 'freeze' , false );
-	};
-
-	// find required view
-	function findRequiredView( needle , haystack ){
-		if( needle === haystack ) return true;
-
-		var requires = this.getView( haystack ).data('requires'),
-			i;
-
-		for( i = 0; i < requires.length; i++ ){
-			if( findRequiredView.call( this , needle , requires[i] ) ){
-				return true;
-			}
+			return false;
 		}
-
-		return false;
-	};
-
-})();
+	})($(window));
