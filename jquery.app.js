@@ -298,7 +298,7 @@ var app = (function (app) {
             prevViews = views;
 
             return app;
-        },
+        }
     });
 
     // default event binding
