@@ -16,7 +16,6 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 
 // define app
 var app = (function (app) {
-	'use strict';
     var views = {},
         prevViews = [],
         hashKey;
@@ -33,10 +32,10 @@ var app = (function (app) {
             // closures for view
             var requires = [],
 				lastQuery,
-				viewdeactivateKey = null,
-				viewactivateKey = null,
-				viewrenderKey = null,
-				viewdeactivateCancel = false;
+				deactivateKey = null,
+				activateKey = null,
+				renderKey = null,
+				deactivateCancel = false;
 
             // register view
             if (views[name]) {
@@ -79,11 +78,11 @@ var app = (function (app) {
                  * view deactivator
                  */
                 deactivate: function () {
-                    if (viewdeactivateKey) {
+                    if (deactivateKey) {
                         return;
                     }
-                    viewdeactivateKey = setTimeout(viewdeactivate, 0);
 
+                    deactivateKey = setTimeout(viewdeactivate, 0);
                     for (var i = 0; i < requires.length; i++) {
                         app.getView(requires[i]).deactivate();
                     }
@@ -93,7 +92,7 @@ var app = (function (app) {
                  * view deactivator
                  */
                 activate: function (name) {
-                    if (viewactivateKey) {
+                    if (activateKey) {
                         return;
                     }
 
@@ -102,10 +101,10 @@ var app = (function (app) {
                     for (; i < requires.length; i++) {
                         app.getView(requires[i]).activate(name);
                     }
-                    if (viewdeactivateKey) {
-                        cancel = viewdeactivateCancel = true;
+                    if (deactivateKey) {
+                        cancel = deactivateCancel = true;
                     }
-                    viewactivateKey = setTimeout(function () {
+                    activateKey = setTimeout(function () {
                         viewactivate(name, cancel);
                     }, 0);
                 },
@@ -115,10 +114,10 @@ var app = (function (app) {
                  * @param {Object} query feed
                  */
                 render: function (query) {
-                    if (viewrenderKey) {
+                    if (renderKey) {
                         return;
                     }
-                    viewrenderKey = setTimeout(function () {
+                    renderKey = setTimeout(function () {
                         viewrender(query);
                     }, 0);
                 }
@@ -143,17 +142,18 @@ var app = (function (app) {
 
             return app;
 
+            // internal viewdeactivate
             function viewdeactivate() {
-                viewdeactivateKey = null;
-                if (!viewdeactivateCancel) {
+                deactivateKey = null;
+                if (!deactivateCancel) {
                     view.trigger('viewdeactivate');
                 }
-                viewdeactivateCancel = false;
+                deactivateCancel = false;
             }
 
             // internal viewactivate
             function viewactivate(name, cancel) {
-                viewactivateKey = null;
+                activateKey = null;
                 if (!cancel) {
                     view.trigger('viewactivate', name);
                 }
@@ -161,7 +161,7 @@ var app = (function (app) {
 
             // internal viewrender
             function viewrender(query) {
-                viewrenderKey = null;
+                renderKey = null;
                 view.trigger('viewrender', query);
             }
         },
@@ -332,7 +332,9 @@ var app = (function (app) {
      * @returns {Boolean?} deps
      */
     function findRequiredView(needle, haystack) {
-        if (needle === haystack) return true;
+        if (needle === haystack) {
+			return true;
+		}
 
         var requires = app.getView(haystack).require(),
             i = 0;
