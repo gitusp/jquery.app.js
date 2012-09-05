@@ -12,341 +12,321 @@
 /*
  * special event register
  */
-$.event.special.viewrender = $.event.special.viewactivate = $.event.special.viewdeactivate = {noBubble : true};
+$.event.special.viewrender = $.event.special.viewactivate = $.event.special.viewdeactivate = {
+    noBubble: true
+};
 
-var app = (function (app)
-	{
-		var views = {},
-			prevViews = [],
-			hashKey;
+var app = (function (app) {
+    var views = {},
+        prevViews = [],
+        hashKey;
 
-		app.extend({
-			/** 
-			 * add view
-			 * @param {String} name the view name
-			 * @param {jQuery} view the view 
-			 * @param {String} group the view's group
-			 * @returns {jQuery} appself
-			 */
-			addView : function (name, view, group)
-				{
-					// closures for view
-					var requires = [];
-						viewdeactivateKey = null,
-						viewactivateKey = null,
-						viewrenderKey = null,
-						viewdeactivateCancel = false;
+    app.extend({
+        /** 
+         * add view
+         * @param {String} name the view name
+         * @param {jQuery} view the view 
+         * @param {String} group the view's group
+         * @returns {jQuery} appself
+         */
+        addView: function (name, view, group) {
+            // closures for view
+            var requires = [];
+            viewdeactivateKey = null,
+            viewactivateKey = null,
+            viewrenderKey = null,
+            viewdeactivateCancel = false;
 
-					// register view
-					if (views[name]){
-						throw('view name ' + name + ' already exists.');
-					} else {
-						views[name] = view;
-					}
+            // register view
+            if (views[name]) {
+                throw ('view name ' + name + ' already exists.');
+            } else {
+                views[name] = view;
+            }
 
-					// expand view
-					view.extend({
-						/** 
-						 * config or get require
-						 * @param {String?} name the view name
-						 * @returns {jQuery?} viewself
-						 */
-						require : function (name)
-							{
-								if (name === undefined) {
-									return requires;
-								} else {
-									requires.push(name);
-									return view;
-								}
-							},
+            // expand view
+            view.extend({
+                /** 
+                 * config or get require
+                 * @param {String?} name the view name
+                 * @returns {jQuery?} viewself
+                 */
+                require: function (name) {
+                    if (name === undefined) {
+                        return requires;
+                    } else {
+                        requires.push(name);
+                        return view;
+                    }
+                },
 
-						/** 
-						 * getter of group
-						 * @returns {String} his group
-						 */
-						getGroup : function ()
-							{
-								return group;
-							},
+                /** 
+                 * getter of group
+                 * @returns {String} his group
+                 */
+                getGroup: function () {
+                    return group;
+                },
 
-						deactivate : function ()
-							{
-								if (viewdeactivateKey) {
-									return;
-								}
-								viewdeactivateKey = setTimeout( viewdeactivate, 0 );
+                deactivate: function () {
+                    if (viewdeactivateKey) {
+                        return;
+                    }
+                    viewdeactivateKey = setTimeout(viewdeactivate, 0);
 
-								for(var i = 0; i < requires.length; i++ ){
-									app.getView( requires[i] ).deactivate();
-								}
-							},
-						activate : function (name)
-							{
-								if (viewactivateKey) {
-									return;
-								}
+                    for (var i = 0; i < requires.length; i++) {
+                        app.getView(requires[i]).deactivate();
+                    }
+                },
+                activate: function (name) {
+                    if (viewactivateKey) {
+                        return;
+                    }
 
-								var cancel,
-									i = 0;
-								for(; i < requires.length; i++ ){
-									app.getView( requires[i] ).activate(name);
-								}
-								if (viewdeactivateKey) {
-									cancel = viewdeactivateCancel = true;
-								}
-								viewactivateKey = setTimeout(function ()
-									{
-										viewactivate(name, cancel);
-									}, 0);
-							},
-						render : function (query)
-							{
-								if (viewrenderKey) {
-									return;
-								}
-								viewrenderKey = setTimeout(function()
-									{
-										viewrender(query);
-									}, 0 );
-							}
-					});
+                    var cancel,
+                    i = 0;
+                    for (; i < requires.length; i++) {
+                        app.getView(requires[i]).activate(name);
+                    }
+                    if (viewdeactivateKey) {
+                        cancel = viewdeactivateCancel = true;
+                    }
+                    viewactivateKey = setTimeout(function () {
+                        viewactivate(name, cancel);
+                    }, 0);
+                },
+                render: function (query) {
+                    if (viewrenderKey) {
+                        return;
+                    }
+                    viewrenderKey = setTimeout(function () {
+                        viewrender(query);
+                    }, 0);
+                }
+            });
 
-					// default handler of view
-					view.bind( 'viewrender' , function( e , query ){
-						var originalQuery;
+            // default handler of view
+            view.bind('viewrender', function (e, query) {
+                var originalQuery;
 
-						if ( $.isPlainObject( query ) ) {
-							originalQuery = $.extend( true , {} , query );
-						}
-						else if ( $.isArray( query ) ) {
-							originalQuery = $.extend( true , [] , query );
-						}
-						else {
-							originalQuery = query;
-						}
-						
-						setTimeout( function(){
-							view.data( 'lastQuery' , originalQuery );
-						} , 0 );
-					} );
+                if ($.isPlainObject(query)) {
+                    originalQuery = $.extend(true, {}, query);
+                } else if ($.isArray(query)) {
+                    originalQuery = $.extend(true, [], query);
+                } else {
+                    originalQuery = query;
+                }
 
-					return app;
+                setTimeout(function () {
+                    view.data('lastQuery', originalQuery);
+                }, 0);
+            });
 
-					function viewdeactivate(){
-						viewdeactivateKey=null;
-						if( !viewdeactivateCancel ){
-							view.trigger( 'viewdeactivate' );
-						}
-						viewdeactivateCancel = false;
-					}
+            return app;
 
-					// internal viewactivate
-					function viewactivate( name , cancel ){
-						viewactivateKey=null;
-						if( !cancel ){
-							view.trigger( 'viewactivate' , name );
-						}
-					}
+            function viewdeactivate() {
+                viewdeactivateKey = null;
+                if (!viewdeactivateCancel) {
+                    view.trigger('viewdeactivate');
+                }
+                viewdeactivateCancel = false;
+            }
 
-					// internal viewrender
-					function viewrender( query ){
-						viewrenderKey=null;
-						view.trigger( 'viewrender' , query );
-					}
-				},
+            // internal viewactivate
+            function viewactivate(name, cancel) {
+                viewactivateKey = null;
+                if (!cancel) {
+                    view.trigger('viewactivate', name);
+                }
+            }
 
-			/** 
-			 * get view
-			 * @param {String} name the view name
-			 * @returns {jQuery} the view
-			 */
-			getView : function (name)
-				{
-					if (!views[name]) {
-						throw('view name ' + name + ' not exists.');
-					}
+            // internal viewrender
+            function viewrender(query) {
+                viewrenderKey = null;
+                view.trigger('viewrender', query);
+            }
+        },
 
-					return views[name];
-				},
+        /** 
+         * get view
+         * @param {String} name the view name
+         * @returns {jQuery} the view
+         */
+        getView: function (name) {
+            if (!views[name]) {
+                throw ('view name ' + name + ' not exists.');
+            }
 
-			/** 
-			 * prepare hash
-			 * @param {String} name view name
-			 * @param {Object} query passed to view
-			 * @returns {jQuery} appself
-			 */
-			prepare : function (name, query)
-				{
-					var viewName,
-						group = app.getView(name).getGroup(),
-						viewPrototype = hash().split('/'),
-						i = 0;
+            return views[name];
+        },
 
-					// private view
-					if (!group) {
-						throw('view name ' + name + ' is private.');
-					}
+        /** 
+         * prepare hash
+         * @param {String} name view name
+         * @param {Object} query passed to view
+         * @returns {jQuery} appself
+         */
+        prepare: function (name, query) {
+            var viewName,
+            group = app.getView(name).getGroup(),
+                viewPrototype = hash().split('/'),
+                i = 0;
 
-					// remove exclusive
-					for (; i < viewPrototype.length; i++) {
-						if( !viewPrototype[i] ){
-							viewPrototype.splice( i , 1 );
-							i--;
-							continue;
-						}
+            // private view
+            if (!group) {
+                throw ('view name ' + name + ' is private.');
+            }
 
-						viewName = viewPrototype[i].split('|')[0];
-						if( app.getView( viewName ).getGroup() === group ){
-							viewPrototype.splice( i , 1 );
-							i--;
-						}
-					}
-					
-					// add new hash
-					if ( $.isPlainObject( query ) || $.isArray( query ) ) {
-						query = JSON.stringify( query );
-					}
-					query = query ? '|' + encodeURIComponent( query ) : '';
-					viewPrototype.push( name + query );
-					hash( '/' + viewPrototype.join('/') );
+            // remove exclusive
+            for (; i < viewPrototype.length; i++) {
+                if (!viewPrototype[i]) {
+                    viewPrototype.splice(i, 1);
+                    i--;
+                    continue;
+                }
 
-					return app;
-				},
+                viewName = viewPrototype[i].split('|')[0];
+                if (app.getView(viewName).getGroup() === group) {
+                    viewPrototype.splice(i, 1);
+                    i--;
+                }
+            }
 
-			/** 
-			 * remove view
-			 * @param {String} name view name
-			 * @returns {jQuery} appself
-			 */
-			remove : function (name)
-				{
-					var viewName,
-						viewPrototype = prepareHash().split('/'),
-						i;
+            // add new hash
+            if ($.isPlainObject(query) || $.isArray(query)) {
+                query = JSON.stringify(query);
+            }
+            query = query ? '|' + encodeURIComponent(query) : '';
+            viewPrototype.push(name + query);
+            hash('/' + viewPrototype.join('/'));
 
-					// remove matched view
-					for( i = 0; i < viewPrototype.length; i++ ){
-						if( !viewPrototype[i] ){
-							viewPrototype.splice( i , 1 );
-							i--;
-							continue;
-						}
+            return app;
+        },
 
-						viewName = viewPrototype[i].split('|')[0];
-						if( findRequiredView.call( this , name , viewName ) ){
-							viewPrototype.splice( i , 1 );
-							i--;
-						}
-					}
-					
-					// apply new hash
-					prepareHash( '/' + viewPrototype.join('/') );
+        /** 
+         * remove view
+         * @param {String} name view name
+         * @returns {jQuery} appself
+         */
+        remove: function (name) {
+            var viewName,
+            viewPrototype = prepareHash().split('/'),
+                i;
 
-					return app;
-				},
+            // remove matched view
+            for (i = 0; i < viewPrototype.length; i++) {
+                if (!viewPrototype[i]) {
+                    viewPrototype.splice(i, 1);
+                    i--;
+                    continue;
+                }
 
-			/** 
-			 * render views
-			 * @returns {jQuery} appself
-			 */
-			render : function ()
-				{
-					var i,
-						viewName,
-						query;
+                viewName = viewPrototype[i].split('|')[0];
+                if (findRequiredView.call(this, name, viewName)) {
+                    viewPrototype.splice(i, 1);
+                    i--;
+                }
+            }
 
-					// viewdeactivate
-					for( i = 0; i < prevViews.length; i++ ){
-						viewName = prevViews[i].split('|')[0];
-						app.getView(viewName).deactivate();
-						//self.getView(viewName).trigger('_viewdeactivate');
-					}
+            // apply new hash
+            prepareHash('/' + viewPrototype.join('/'));
 
-					// viewactivate and viewrender
-					var views = hash().split('/');
-					for( i = 0; i < views.length; i++ ){
+            return app;
+        },
 
-						if( !views[i] ){
-							views.splice( i , 1 );
-							i--;
-							continue;
-						}
+        /** 
+         * render views
+         * @returns {jQuery} appself
+         */
+        render: function () {
+            var i,
+            viewName,
+            query;
 
-						viewName = views[i].split('|')[0];
-						query = views[i].split('|')[1] || '';
-						query = decodeURIComponent( query );
+            // viewdeactivate
+            for (i = 0; i < prevViews.length; i++) {
+                viewName = prevViews[i].split('|')[0];
+                app.getView(viewName).deactivate();
+                //self.getView(viewName).trigger('_viewdeactivate');
+            }
 
-						var tempQuery;
-						try {
-							tempQuery = JSON.parse(  query  );
-						}
-						catch ( e ) {
-							tempQuery = query;
-						}
-						query = tempQuery;
+            // viewactivate and viewrender
+            var views = hash().split('/');
+            for (i = 0; i < views.length; i++) {
 
-						app.getView(viewName).activate(viewName);
-						app.getView(viewName).render(query);
-						//self.getView(viewName).trigger('_viewactivate' , viewName);
-						//self.getView(viewName).trigger('_viewrender' , query );
-					}
+                if (!views[i]) {
+                    views.splice(i, 1);
+                    i--;
+                    continue;
+                }
 
-					// current 2 prev
-					prevViews = views;
+                viewName = views[i].split('|')[0];
+                query = views[i].split('|')[1] || '';
+                query = decodeURIComponent(query);
 
-					return app;
-				},
-		});
+                var tempQuery;
+                try {
+                    tempQuery = JSON.parse(query);
+                } catch (e) {
+                    tempQuery = query;
+                }
+                query = tempQuery;
 
-		// default event binding
-		// NOTE: normally we bind app.render to viewchange evnet
-		app.hashchange(function ()
-			{
-				clearTimeout(hashKey);
-				hashKey = setTimeout(function ()
-					{
-						app.trigger('viewchange');
-					}, 0);
-			});
+                app.getView(viewName).activate(viewName);
+                app.getView(viewName).render(query);
+                //self.getView(viewName).trigger('_viewactivate' , viewName);
+                //self.getView(viewName).trigger('_viewrender' , query );
+            }
 
-		return app;
+            // current 2 prev
+            prevViews = views;
 
-		/** 
-		 * handle hash
-		 * @param {String} hash if be feed then set hash, or return hash
-		 * @returns {String?} current hash
-		 */
-		function hash(hash)
-		{
-			if (hash === undefined) {
-				return $.browser.mozilla ?
-					(window.location.href.split('#')[1] || '') :
-					window.location.hash.replace(/^#/, '');
-			} else {
-				window.location.hash = hash;
-			}
-		}
+            return app;
+        },
+    });
 
-		/** 
-		 * find required view
-		 * @param {String} needle view name
-		 * @param {String} haystack current evaled name
-		 * @returns {Boolean?} deps
-		 */
-		function findRequiredView( needle , haystack )
-		{
-			if( needle === haystack ) return true;
+    // default event binding
+    // NOTE: normally we bind app.render to viewchange evnet
+    app.hashchange(function () {
+        clearTimeout(hashKey);
+        hashKey = setTimeout(function () {
+            app.trigger('viewchange');
+        }, 0);
+    });
 
-			var requires = app.getView( haystack ).require(),
-				i = 0;
+    return app;
 
-			for(; i < requires.length; i++ ){
-				if( findRequiredView.call( this , needle , requires[i] ) ){
-					return true;
-				}
-			}
+    /** 
+     * handle hash
+     * @param {String} hash if be feed then set hash, or return hash
+     * @returns {String?} current hash
+     */
+    function hash(hash) {
+        if (hash === undefined) {
+            return $.browser.mozilla ? (window.location.href.split('#')[1] || '') : window.location.hash.replace(/^#/, '');
+        } else {
+            window.location.hash = hash;
+        }
+    }
 
-			return false;
-		}
-	})($(window));
+    /** 
+     * find required view
+     * @param {String} needle view name
+     * @param {String} haystack current evaled name
+     * @returns {Boolean?} deps
+     */
+    function findRequiredView(needle, haystack) {
+        if (needle === haystack) return true;
+
+        var requires = app.getView(haystack).require(),
+            i = 0;
+
+        for (; i < requires.length; i++) {
+            if (findRequiredView.call(this, needle, requires[i])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+})($(window));
