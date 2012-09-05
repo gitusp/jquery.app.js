@@ -113,7 +113,7 @@ var app = (function (app)
 					});
 
 					// default handler of view
-					self.bind( 'viewrender' , function( e , query ){
+					view.bind( 'viewrender' , function( e , query ){
 						var originalQuery;
 
 						if ( $.isPlainObject( query ) ) {
@@ -127,7 +127,7 @@ var app = (function (app)
 						}
 						
 						setTimeout( function(){
-							self.data( 'lastQuery' , originalQuery );
+							view.data( 'lastQuery' , originalQuery );
 						} , 0 );
 					} );
 

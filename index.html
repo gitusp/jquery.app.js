@@ -52,17 +52,15 @@ a:hover {
 <a>viewB</a>
 <a>viewC</a>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
 <script src="lib/jquery.ba-hashchange.min.js"></script>
 <script src="lib/jquery.cut.js"></script>
-<script src="lib/jquery.event.pre.js"></script>
 <script src="jquery.app.js"></script>
 <script>
 
 
-var app = $( window ).app(),
-	viewA = (function(){
-		var v = $( '<div id="viewA">viewA</div>' ).view();
+var viewA = (function(){
+		var v = $( '<div id="viewA">viewA</div>' );
 		app.addView( 'viewA' , v , 'main' );
 
 		v.bind( 'viewactivate' , function( e ){
@@ -75,7 +73,7 @@ var app = $( window ).app(),
 		return v;
 	})(),
 	viewB = (function(){
-		var v = $( '<div id="viewB">viewB</div>' ).view();
+		var v = $( '<div id="viewB">viewB</div>' );
 		app.addView( 'viewB' , v , 'main' );
 		v.require( 'viewC' );
 
@@ -89,7 +87,7 @@ var app = $( window ).app(),
 		return v;
 	})(),
 	viewC = (function(){
-		var v = $( '<div id="viewC">viewC</div>' ).view();
+		var v = $( '<div id="viewC">viewC</div>' );
 		app.addView( 'viewC' , v , 'sub' );
 
 		v.bind( 'viewactivate' , function( e ){
@@ -108,14 +106,13 @@ $( 'a' ).click( function( e ){
 		name = that.html(),
 		view = app.getView( name );
 	if ( view.is( ':visible' ) ) {
-		app.deactivateView( name );
+		app.remove( name );
 	}
 	else {
-		app.renderView( name );
+		app.prepare( name );
 	}
 } );
 
-// start app
-app.pump();
+app.bind('viewchange', app.render);
 </script>
 </html>
