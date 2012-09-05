@@ -17,6 +17,139 @@
  */
 $.event.special.viewrender = $.event.special.viewactivate = $.event.special.viewdeactivate = { noBubble : true };
 
+var app = (function (app)
+	{
+		var views = {};
+		app.extend({
+			/** 
+			 * add view
+			 * @param {String} name the view name
+			 * @param {jQuery} view the view 
+			 * @param {String} group the view's group
+			 * @returns {jQuery} appself
+			 */
+			addView : function (name, view, group)
+				{
+					view.data('viewName', name);
+					view.data('viewGroup', group);
+					
+					if (views[name]){
+						throw('view name ' + name + ' already exists.');
+					} else {
+						views[name] = view;
+					}
+					return app;
+				},
+
+			/** 
+			 * get view
+			 * @param {String} name the view name
+			 * @returns {jQuery} the view
+			 */
+			getView : function (name)
+				{
+					if (!views[name]) {
+						throw('view name ' + name + ' not exists.');
+					}
+
+					return views[name];
+				},
+
+			/** 
+			 * get view
+			 * @param {String} name view name
+			 * @param {Object} query passed to view
+			 * @returns {jQuery} appself
+			 */
+			prepare : function (name, query)
+				{
+					var viewName,
+						group = app.getView(name).data('viewGroup'),
+						viewPrototype = hash().split('/'),
+						i = 0;
+
+					// private view
+					if (!group) {
+						throw('view name ' + name + ' is private.');
+					}
+
+					// remove exclusive
+					for (; i < viewPrototype.length; i++) {
+
+						if( !viewPrototype[i] ){
+							viewPrototype.splice( i , 1 );
+							i--;
+							continue;
+						}
+
+						viewName = viewPrototype[i].split('|')[0];
+						if( self.getView( viewName ).data( 'viewGroup' ) === group ){
+							viewPrototype.splice( i , 1 );
+							i--;
+						}
+					}
+					
+					// add new hash
+					if ( $.isPlainObject( query ) || $.isArray( query ) ) {
+						query = JSON.stringify( query );
+					}
+					query = query ? '|' + encodeURIComponent( query ) : '';
+					viewPrototype.push( name + query );
+					hash( '/' + viewPrototype.join('/') );
+
+					return app;
+				},
+
+			/** 
+			 * get view
+			 * @param {String} name view name
+			 * @returns {jQuery} appself
+			 */
+			deactivateView : function (name)
+				{
+					var self = this,
+						viewName,
+						viewPrototype = prepareHash().split('/'),
+						i;
+
+					// remove matched view
+					for( i = 0; i < viewPrototype.length; i++ ){
+
+						if( !viewPrototype[i] ){
+							viewPrototype.splice( i , 1 );
+							i--;
+							continue;
+						}
+
+						viewName = viewPrototype[i].split('|')[0];
+						if( findRequiredView.call( this , name , viewName ) ){
+							viewPrototype.splice( i , 1 );
+							i--;
+						}
+					}
+					
+					// apply new hash
+					prepareHash( '/' + viewPrototype.join('/') );
+
+					return app;
+				},
+		});
+
+		return app;
+
+		// hash handler
+		function hash(hash)
+		{
+			if (hash === undefined) {
+				return $.browser.mozilla ?
+					(window.location.href.split('#')[1] || '') :
+					window.location.hash.replace(/^#/, '');
+			} else {
+				window.location.hash = hash;
+			}
+		}
+	})($(window));
+
 /*
  * define view
  */
@@ -152,31 +285,6 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 	var app = $.sub();
 
 	// add view and set me
-	app.fn.addView = function( name , view , group ){
-		var views = this.data('views');
-		view.data( 'app' , this );
-		view.data( 'viewName' , name );
-		view.data( 'viewGroup' , group );
-		
-		if( views[name] ){
-			throw ( 'view name ' + name + ' already exists.');
-		}
-		else{
-			views[name] = view;
-		}
-
-		return this;
-	};
-
-	// view getter
-	app.fn.getView = function( name ){
-		var views = this.data('views');
-		if( !views[name] ){
-			throw ('view name ' + name + ' not exists.');
-		}
-
-		return views[name];
-	};
 
 	// start messsage pump
 	app.fn.pump = function(){
@@ -258,74 +366,7 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 			}
 	};
 
-	// hash setter
-	app.fn.renderView = function( name , query ){
-		var self = this,
-			viewName,
-			group = self.getView( name ).data( 'viewGroup' ),
-			viewPrototype = prepareHash().split('/'),
-			i;
 
-		// private view
-		if ( !group ) {
-			throw ( 'view name ' + name + ' is private.');
-		}
-
-		// remove exclusive
-		for( i = 0; i < viewPrototype.length; i++ ){
-
-			if( !viewPrototype[i] ){
-				viewPrototype.splice( i , 1 );
-				i--;
-				continue;
-			}
-
-			viewName = viewPrototype[i].split('|')[0];
-			if( self.getView( viewName ).data( 'viewGroup' ) === group ){
-				viewPrototype.splice( i , 1 );
-				i--;
-			}
-		}
-		
-		// add new hash
-		if ( $.isPlainObject( query ) || $.isArray( query ) ) {
-			query = JSON.stringify( query );
-		}
-		query = query ? '|' + encodeURIComponent( query ) : '';
-		viewPrototype.push( name + query );
-		prepareHash( '/' + viewPrototype.join('/') );
-
-		return self;
-	};
-
-	// hash remover
-	app.fn.deactivateView = function( name ){
-		var self = this,
-			viewName,
-			viewPrototype = prepareHash().split('/'),
-			i;
-
-		// remove matched view
-		for( i = 0; i < viewPrototype.length; i++ ){
-
-			if( !viewPrototype[i] ){
-				viewPrototype.splice( i , 1 );
-				i--;
-				continue;
-			}
-
-			viewName = viewPrototype[i].split('|')[0];
-			if( findRequiredView.call( this , name , viewName ) ){
-				viewPrototype.splice( i , 1 );
-				i--;
-			}
-		}
-		
-		// apply new hash
-		prepareHash( '/' + viewPrototype.join('/') );
-
-		return self;
-	};
 	
 	// freeze and unfreeze app
 	app.fn.freeze = function(){
@@ -333,17 +374,6 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 	};
 	app.fn.unfreeze = function(){
 		this.data( 'freeze' , false );
-	};
-
-	// express internal app
-	$.fn.app = function(){
-		// closure
-		var self = app( this );
-
-		// init member
-		self.data('views' , {});
-
-		return self;
 	};
 
 	// find required view
@@ -362,15 +392,4 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 		return false;
 	};
 
-	// hash handler
-	function prepareHash ( hash ) {
-		if( hash === undefined ){
-			return $.browser.mozilla ?
-				(window.location.href.split('#')[1] || '') :
-				window.location.hash.replace(/^#/, '');
-		}
-		else{
-			return window.location.hash = hash;
-		}
-	};
 })();
