@@ -9,14 +9,14 @@
  * thanks!!
  */
 
-/*
- * special event register
- */
+// register special event
 $.event.special.viewrender = $.event.special.viewactivate = $.event.special.viewdeactivate = {
     noBubble: true
 };
 
+// define app
 var app = (function (app) {
+	'use strict';
     var views = {},
         prevViews = [],
         hashKey;
@@ -31,11 +31,12 @@ var app = (function (app) {
          */
         addView: function (name, view, group) {
             // closures for view
-            var requires = [];
-            viewdeactivateKey = null,
-            viewactivateKey = null,
-            viewrenderKey = null,
-            viewdeactivateCancel = false;
+            var requires = [],
+				lastQuery,
+				viewdeactivateKey = null,
+				viewactivateKey = null,
+				viewrenderKey = null,
+				viewdeactivateCancel = false;
 
             // register view
             if (views[name]) {
@@ -54,10 +55,9 @@ var app = (function (app) {
                 require: function (name) {
                     if (name === undefined) {
                         return requires;
-                    } else {
-                        requires.push(name);
-                        return view;
                     }
+					requires.push(name);
+					return view;
                 },
 
                 /** 
@@ -68,6 +68,16 @@ var app = (function (app) {
                     return group;
                 },
 
+                /** 
+                 * getter of last query
+                 */
+                lastQuery: function () {
+                    return lastQuery;
+                },
+
+                /** 
+                 * view deactivator
+                 */
                 deactivate: function () {
                     if (viewdeactivateKey) {
                         return;
@@ -78,13 +88,17 @@ var app = (function (app) {
                         app.getView(requires[i]).deactivate();
                     }
                 },
+
+                /** 
+                 * view deactivator
+                 */
                 activate: function (name) {
                     if (viewactivateKey) {
                         return;
                     }
 
                     var cancel,
-                    i = 0;
+						i = 0;
                     for (; i < requires.length; i++) {
                         app.getView(requires[i]).activate(name);
                     }
@@ -95,6 +109,11 @@ var app = (function (app) {
                         viewactivate(name, cancel);
                     }, 0);
                 },
+
+                /** 
+                 * render view
+                 * @param {Object} query feed
+                 */
                 render: function (query) {
                     if (viewrenderKey) {
                         return;
@@ -118,7 +137,7 @@ var app = (function (app) {
                 }
 
                 setTimeout(function () {
-                    view.data('lastQuery', originalQuery);
+					lastQuery = originalQuery;
                 }, 0);
             });
 
@@ -161,14 +180,14 @@ var app = (function (app) {
         },
 
         /** 
-         * prepare hash
+         * stage view and set hash
          * @param {String} name view name
          * @param {Object} query passed to view
          * @returns {jQuery} appself
          */
-        prepare: function (name, query) {
+        stage: function (name, query) {
             var viewName,
-            group = app.getView(name).getGroup(),
+				group = app.getView(name).getGroup(),
                 viewPrototype = hash().split('/'),
                 i = 0;
 
@@ -204,17 +223,17 @@ var app = (function (app) {
         },
 
         /** 
-         * remove view
+         * unstage view and set hash
          * @param {String} name view name
          * @returns {jQuery} appself
          */
-        remove: function (name) {
+        unstage: function (name) {
             var viewName,
-            viewPrototype = prepareHash().split('/'),
-                i;
+				viewPrototype = hash().split('/'),
+                i = 0;
 
             // remove matched view
-            for (i = 0; i < viewPrototype.length; i++) {
+            for (; i < viewPrototype.length; i++) {
                 if (!viewPrototype[i]) {
                     viewPrototype.splice(i, 1);
                     i--;
@@ -222,14 +241,14 @@ var app = (function (app) {
                 }
 
                 viewName = viewPrototype[i].split('|')[0];
-                if (findRequiredView.call(this, name, viewName)) {
+                if (findRequiredView(name, viewName)) {
                     viewPrototype.splice(i, 1);
                     i--;
                 }
             }
 
             // apply new hash
-            prepareHash('/' + viewPrototype.join('/'));
+            hash('/' + viewPrototype.join('/'));
 
             return app;
         },
@@ -240,20 +259,19 @@ var app = (function (app) {
          */
         render: function () {
             var i,
-            viewName,
-            query;
+				viewName,
+				query,
+				tempQuery,
+				views = hash().split('/');
 
             // viewdeactivate
             for (i = 0; i < prevViews.length; i++) {
                 viewName = prevViews[i].split('|')[0];
                 app.getView(viewName).deactivate();
-                //self.getView(viewName).trigger('_viewdeactivate');
             }
 
             // viewactivate and viewrender
-            var views = hash().split('/');
             for (i = 0; i < views.length; i++) {
-
                 if (!views[i]) {
                     views.splice(i, 1);
                     i--;
@@ -264,7 +282,7 @@ var app = (function (app) {
                 query = views[i].split('|')[1] || '';
                 query = decodeURIComponent(query);
 
-                var tempQuery;
+                tempQuery = undefined;
                 try {
                     tempQuery = JSON.parse(query);
                 } catch (e) {
@@ -274,8 +292,6 @@ var app = (function (app) {
 
                 app.getView(viewName).activate(viewName);
                 app.getView(viewName).render(query);
-                //self.getView(viewName).trigger('_viewactivate' , viewName);
-                //self.getView(viewName).trigger('_viewrender' , query );
             }
 
             // current 2 prev
@@ -322,7 +338,7 @@ var app = (function (app) {
             i = 0;
 
         for (; i < requires.length; i++) {
-            if (findRequiredView.call(this, needle, requires[i])) {
+            if (findRequiredView(needle, requires[i])) {
                 return true;
             }
         }

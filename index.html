@@ -106,10 +106,10 @@ $( 'a' ).click( function( e ){
 		name = that.html(),
 		view = app.getView( name );
 	if ( view.is( ':visible' ) ) {
-		app.remove( name );
+		app.unstage( name );
 	}
 	else {
-		app.prepare( name );
+		app.stage( name );
 	}
 } );
 
