@@ -24,10 +24,10 @@ var app = (function (app) {
          * add view
          * @param {String} name the view name
          * @param {jQuery} view the view 
-         * @param {String} group the view's group
+         * @param {int} priority the view's priority
          * @returns {jQuery} appself
          */
-        addView: function (name, view, group) {
+        addView: function (name, view, priority) {
             // closures for view
             var requires = [],
                 lastQuery,
@@ -59,11 +59,27 @@ var app = (function (app) {
                 },
 
                 /** 
-                 * getter of group
-                 * @returns {String} his group
+                 * getter of lastQuery
+                 * @returns {String} last querystring
                  */
-                getGroup: function () {
-                    return group;
+                lastQuery: function () {
+                    return lastQuery;
+                },
+
+                /** 
+                 * getter of name
+                 * @returns {String} his name
+                 */
+                getName: function () {
+                    return name;
+                },
+
+                /** 
+                 * getter of priority
+                 * @returns {int} his priority
+                 */
+                getPriority: function () {
+                    return priority;
                 },
 
                 /** 
@@ -187,36 +203,8 @@ var app = (function (app) {
          * @returns {jQuery} appself
          */
         stage: function (name, query) {
-            var viewName,
-                group = app.getView(name).getGroup(),
-                viewPrototype = hash().split('/'),
-                i = 0;
-
-            // private view
-            if (!group) {
-                throw ('view name ' + name + ' is private.');
-            }
-
-            // remove exclusive
-            for (; i < viewPrototype.length; i++) {
-                if (!viewPrototype[i]) {
-                    viewPrototype.splice(i, 1);
-                    i--;
-                    continue;
-                }
-
-                viewName = viewPrototype[i].split('|')[0];
-                if (app.getView(viewName).getGroup() === group) {
-                    viewPrototype.splice(i, 1);
-                    i--;
-                }
-            }
-
-            // add new hash
             query = queryStringify(query);
-            viewPrototype.push(name + (query ? '|' + query : ''));
-            hash('/' + viewPrototype.join('/'));
-
+            hash('/' + name + (query ? '|' + query : ''));
             return app;
         },
 
@@ -227,28 +215,55 @@ var app = (function (app) {
          */
         unstage: function (name) {
             var viewName,
-                viewPrototype = hash().split('/'),
+                leftView,
                 i = 0;
 
             // remove matched view
-            for (; i < viewPrototype.length; i++) {
-                if (!viewPrototype[i]) {
-                    viewPrototype.splice(i, 1);
-                    i--;
-                    continue;
-                }
-
-                viewName = viewPrototype[i].split('|')[0];
+            for (; i < activeViews.length; i++) {
+                viewName = activeViews.getName();
                 if (findRequiredView(name, viewName)) {
-                    viewPrototype.splice(i, 1);
+                    activeViews[i].deactivate();
+                    activeViews.splice(i, 1);
                     i--;
                 }
             }
 
             // apply new hash
-            hash('/' + viewPrototype.join('/'));
+            leftView = activeViews.sort(function (a, b) {
+                return a.getPriority() - b.getPriority();
+            }).pop();
+            stage(leftView.getName(), leftView.lastQuery());
 
             return app;
+        },
+
+        /** 
+         * render views
+         * @param {Array.<Object>} states collection of view and query
+         * @returns {jQuery} appself
+         */
+        render: function (name, query) {
+            var i = 0,
+                view = app.getView(name);
+
+            // private view
+            if (view.getPriority() < 0) {
+                throw ('view name ' + name + ' is private.');
+            }
+
+            // viewdeactivate
+            for (; i < activeViews.length; i++) {
+                if (activeViews[i].getPriority() < view.getPriority()) {
+                    activeViews[i].deactivate();
+                    activeViews.splice(i, 1);
+                    i--;
+                }
+            }
+
+            // viewactivate and viewrender
+            view.activate(name);
+            view.render(query);
+            activeViews.push(view);
         },
 
         /** 
@@ -265,39 +280,23 @@ var app = (function (app) {
     app.hashchange(function () {
         clearTimeout(hashKey);
         hashKey = setTimeout(function () {
-            var statesBase = hash().split('/'),
-                states = [],
-                splited,
-                querystring,
-                query,
-                i = 0;
+            var listed = hash().split('/').pop().split('|'),
+                name = listed[0],
+                querystring = listed[1] || '';
+                query;
 
-            for (; i < statesBase.length; i++) {
-                if (!statesBase[i]) {
-                    statesBase.splice(i, 1);
-                    i--;
-                    continue;
-                }
-
-                splited = statesBase[i].split('|');
-                querystring = splited[1] || '';
-
-                if (querystring.substr(0,1) == '?') {
-                    query = $.deparam.querystring(querystring);
-                } else {
-                    query = decodeURIComponent(querystring);
-                }
-
-                states.push({
-                    name: splited[0],
-                    query: query
-                });
+            if (querystring.substr(0,1) == '?') {
+                query = $.deparam.querystring(querystring);
+            } else {
+                query = decodeURIComponent(querystring);
             }
 
-            app.trigger('viewchange', [states]);
+            app.trigger('viewchange', [name, query]);
         }, 0);
     });
-    app.bind('viewchange', render);
+    app.bind('viewchange', function (e, name, query) {
+        app.render(name, query);
+    });
 
     return app;
 
@@ -312,6 +311,21 @@ var app = (function (app) {
         } else {
             window.location.hash = hash;
         }
+    }
+
+    /** 
+     * to query string
+     * @param {Object} o
+     * @returns {String} stringified
+     */
+    function queryStringify(o) {
+        if ($.isPlainObject(o) || $.isArray(o)) {
+            return $.param.querystring('', o);
+        }
+        if (o) {
+            return encodeURIComponent(o);
+        }
+        return '';
     }
 
     /** 
@@ -335,43 +349,5 @@ var app = (function (app) {
         }
 
         return false;
-    }
-
-    /** 
-     * to query string
-     * @param {Object} o
-     * @returns {String} stringified
-     */
-    function queryStringify(o) {
-        if ($.isPlainObject(o) || $.isArray(o)) {
-            return $.param.querystring('', o);
-        }
-        if (o) {
-            return encodeURIComponent(o);
-        }
-        return '';
-    }
-
-    /** 
-     * render views
-     * @param {Array.<Object>} states collection of view and query
-     * @returns {jQuery} appself
-     */
-    function render(e, states) {
-        var i, view;
-
-        // viewdeactivate
-        for (i = 0; i < activeViews.length; i++) {
-            activeViews[i].deactivate();
-        }
-        activeViews = [];
-
-        // viewactivate and viewrender
-        for (i = 0; i < states.length; i++) {
-            view = app.getView(states[i].name);
-            view.activate(states[i].name);
-            view.render(states[i].query);
-            activeViews.push(view);
-        }
     }
 })($(window));
