@@ -17,7 +17,7 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 // define app
 var app = (function (app) {
     var views = {},
-        prevViews = [],
+        activeViews = [],
         hashKey;
 
     app.extend({
@@ -255,47 +255,25 @@ var app = (function (app) {
 
         /** 
          * render views
+         * @param {Array.<Object>} views collection of view and query
          * @returns {jQuery} appself
          */
-        render: function () {
-            var i,
-				viewName,
-				query,
-				tempQuery,
-				views = hash().split('/');
+        render: function (states) {
+            var i, view;
 
             // viewdeactivate
-            for (i = 0; i < prevViews.length; i++) {
-                viewName = prevViews[i].split('|')[0];
-                app.getView(viewName).deactivate();
+            for (i = 0; i < activeViews.length; i++) {
+				activeViews[i].deactivate();
             }
+			activeViews = [];
 
             // viewactivate and viewrender
-            for (i = 0; i < views.length; i++) {
-                if (!views[i]) {
-                    views.splice(i, 1);
-                    i--;
-                    continue;
-                }
-
-                viewName = views[i].split('|')[0];
-                query = views[i].split('|')[1] || '';
-                query = decodeURIComponent(query);
-
-                tempQuery = undefined;
-                try {
-                    tempQuery = JSON.parse(query);
-                } catch (e) {
-                    tempQuery = query;
-                }
-                query = tempQuery;
-
-                app.getView(viewName).activate(viewName);
-                app.getView(viewName).render(query);
+            for (i = 0; i < states.length; i++) {
+				view = app.getView(states[i].name);
+                view.activate(states[i].name);
+                view.render(states[i].query);
+				activeViews.push(view);
             }
-
-            // current 2 prev
-            prevViews = views;
 
             return app;
         }
@@ -306,7 +284,26 @@ var app = (function (app) {
     app.hashchange(function () {
         clearTimeout(hashKey);
         hashKey = setTimeout(function () {
-            app.trigger('viewchange');
+			var statesBase = hash().split('/'),
+				states = [],
+				splited,
+				i = 0;
+
+			for (; i < statesBase.length; i++) {
+                if (!statesBase[i]) {
+                    statesBase.splice(i, 1);
+                    i--;
+					continue;
+                }
+
+				splited = statesBase[i].split('|');
+				states.push({
+					name: splited[0],
+					query: $.parseQuery(splited[1] || '')
+				});
+			}
+
+            app.trigger('viewchange', states);
         }, 0);
     });
 
