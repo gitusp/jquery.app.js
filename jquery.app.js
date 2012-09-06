@@ -30,11 +30,11 @@ var app = (function (app) {
         addView: function (name, view, group) {
             // closures for view
             var requires = [],
-				lastQuery,
-				deactivateKey = null,
-				activateKey = null,
-				renderKey = null,
-				deactivateCancel = false;
+                lastQuery,
+                deactivateKey = null,
+                activateKey = null,
+                renderKey = null,
+                deactivateCancel = false;
 
             // register view
             if (views[name]) {
@@ -54,8 +54,8 @@ var app = (function (app) {
                     if (name === undefined) {
                         return requires;
                     }
-					requires.push(name);
-					return view;
+                    requires.push(name);
+                    return view;
                 },
 
                 /** 
@@ -89,7 +89,7 @@ var app = (function (app) {
                     }
 
                     var cancel,
-						i = 0;
+                        i = 0;
                     for (; i < requires.length; i++) {
                         app.getView(requires[i]).activate(name);
                     }
@@ -117,26 +117,26 @@ var app = (function (app) {
 
             // default handler of view
             view.bind('viewrender', function (e, query) {
-				var originalQuery = queryStringify(query);
-				if (originalQuery && originalQuery == lastQuery) {
-					e.stopImmediatePropagation();
-					return;
-				}
+                var originalQuery = queryStringify(query);
+                if (originalQuery && originalQuery == lastQuery) {
+                    e.stopImmediatePropagation();
+                    return;
+                }
 
                 setTimeout(function () {
-					lastQuery = originalQuery;
+                    lastQuery = originalQuery;
                 }, 0);
             });
-			view.bind('viewdeactivate', function (e) {
-				lastQuery = undefined;
-			});
+            view.bind('viewdeactivate', function (e) {
+                lastQuery = undefined;
+            });
 
             return app;
 
-			/** 
-			 * activate the view
-			 * @param {Object} query feed
-			 */
+            /** 
+             * activate the view
+             * @param {Object} query feed
+             */
             function viewdeactivate() {
                 deactivateKey = null;
                 if (!deactivateCancel) {
@@ -145,11 +145,11 @@ var app = (function (app) {
                 deactivateCancel = false;
             }
 
-			/** 
-			 * deactivate the view
-			 * @param {String} name the view name
-			 * @param {Boolean} cancel is deactivate canceled
-			 */
+            /** 
+             * deactivate the view
+             * @param {String} name the view name
+             * @param {Boolean} cancel is deactivate canceled
+             */
             function viewactivate(name, cancel) {
                 activateKey = null;
                 if (!cancel) {
@@ -157,10 +157,10 @@ var app = (function (app) {
                 }
             }
 
-			/** 
-			 * render the view
-			 * @param {Object} query passed to the view
-			 */
+            /** 
+             * render the view
+             * @param {Object} query passed to the view
+             */
             function viewrender(query) {
                 renderKey = null;
                 view.trigger('viewrender', query);
@@ -188,7 +188,7 @@ var app = (function (app) {
          */
         stage: function (name, query) {
             var viewName,
-				group = app.getView(name).getGroup(),
+                group = app.getView(name).getGroup(),
                 viewPrototype = hash().split('/'),
                 i = 0;
 
@@ -213,7 +213,7 @@ var app = (function (app) {
             }
 
             // add new hash
-			query = queryStringify(query);
+            query = queryStringify(query);
             viewPrototype.push(name + (query ? '|' + query : ''));
             hash('/' + viewPrototype.join('/'));
 
@@ -227,7 +227,7 @@ var app = (function (app) {
          */
         unstage: function (name) {
             var viewName,
-				viewPrototype = hash().split('/'),
+                viewPrototype = hash().split('/'),
                 i = 0;
 
             // remove matched view
@@ -261,16 +261,16 @@ var app = (function (app) {
 
             // viewdeactivate
             for (i = 0; i < activeViews.length; i++) {
-				activeViews[i].deactivate();
+                activeViews[i].deactivate();
             }
-			activeViews = [];
+            activeViews = [];
 
             // viewactivate and viewrender
             for (i = 0; i < states.length; i++) {
-				view = app.getView(states[i].name);
+                view = app.getView(states[i].name);
                 view.activate(states[i].name);
                 view.render(states[i].query);
-				activeViews.push(view);
+                activeViews.push(view);
             }
 
             return app;
@@ -280,10 +280,10 @@ var app = (function (app) {
          * init app
          * @returns {jQuery} appself
          */
-		init : function () {
-			app.hashchange();
-			return app;
-		}
+        init : function () {
+            app.hashchange();
+            return app;
+        }
     });
 
     // default event binding
@@ -291,34 +291,34 @@ var app = (function (app) {
     app.hashchange(function () {
         clearTimeout(hashKey);
         hashKey = setTimeout(function () {
-			var statesBase = hash().split('/'),
-				states = [],
-				splited,
-				querystring,
-				query,
-				i = 0;
+            var statesBase = hash().split('/'),
+                states = [],
+                splited,
+                querystring,
+                query,
+                i = 0;
 
-			for (; i < statesBase.length; i++) {
+            for (; i < statesBase.length; i++) {
                 if (!statesBase[i]) {
                     statesBase.splice(i, 1);
                     i--;
-					continue;
+                    continue;
                 }
 
-				splited = statesBase[i].split('|');
-				querystring = splited[1] || '';
+                splited = statesBase[i].split('|');
+                querystring = splited[1] || '';
 
-				if (querystring.substr(0,1) == '?') {
-					query = $.deparam.querystring(querystring);
-				} else {
-					query = decodeURIComponent(querystring);
-				}
+                if (querystring.substr(0,1) == '?') {
+                    query = $.deparam.querystring(querystring);
+                } else {
+                    query = decodeURIComponent(querystring);
+                }
 
-				states.push({
-					name: splited[0],
-					query: query
-				});
-			}
+                states.push({
+                    name: splited[0],
+                    query: query
+                });
+            }
 
             app.trigger('viewchange', [states]);
         }, 0);
@@ -347,8 +347,8 @@ var app = (function (app) {
      */
     function findRequiredView(needle, haystack) {
         if (needle === haystack) {
-			return true;
-		}
+            return true;
+        }
 
         var requires = app.getView(haystack).require(),
             i = 0;
@@ -367,13 +367,13 @@ var app = (function (app) {
      * @param {Object} o
      * @returns {String} stringified
      */
-	function queryStringify(o) {
-		if ($.isPlainObject(o) || $.isArray(o)) {
-			return $.param.querystring('', o);
-		}
-		if (o) {
-			return encodeURIComponent(o);
-		}
-		return '';
-	}
+    function queryStringify(o) {
+        if ($.isPlainObject(o) || $.isArray(o)) {
+            return $.param.querystring('', o);
+        }
+        if (o) {
+            return encodeURIComponent(o);
+        }
+        return '';
+    }
 })($(window));
