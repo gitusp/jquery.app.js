@@ -239,7 +239,8 @@ var app = (function (app) {
 
         /** 
          * render views
-         * @param {Array.<Object>} states collection of view and query
+         * @param {String} name the view's name
+         * @param {Object} query passed to the view
          * @returns {jQuery} appself
          */
         render: function (name, query) {
