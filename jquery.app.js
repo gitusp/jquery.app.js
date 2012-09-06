@@ -67,13 +67,6 @@ var app = (function (app) {
                 },
 
                 /** 
-                 * getter of last query
-                 */
-                lastQuery: function () {
-                    return lastQuery;
-                },
-
-                /** 
                  * view deactivator
                  */
                 deactivate: function () {
@@ -124,20 +117,19 @@ var app = (function (app) {
 
             // default handler of view
             view.bind('viewrender', function (e, query) {
-                var originalQuery;
-
-                if ($.isPlainObject(query)) {
-                    originalQuery = $.extend(true, {}, query);
-                } else if ($.isArray(query)) {
-                    originalQuery = $.extend(true, [], query);
-                } else {
-                    originalQuery = query;
-                }
+				var originalQuery = queryStringify(query);
+				if (originalQuery && originalQuery == lastQuery) {
+					e.stopImmediatePropagation();
+					return;
+				}
 
                 setTimeout(function () {
 					lastQuery = originalQuery;
                 }, 0);
             });
+			view.bind('viewdeactivate', function (e) {
+				lastQuery = undefined;
+			});
 
             return app;
 
@@ -221,14 +213,8 @@ var app = (function (app) {
             }
 
             // add new hash
-            if ($.isPlainObject(query) || $.isArray(query)) {
-                query = '|' + $.param.querystring('', query);
-            } else if (query) {
-				query = '|' + encodeURIComponent(query);
-			} else {
-				query = '';
-			}
-            viewPrototype.push(name + query);
+			query = queryStringify(query);
+            viewPrototype.push(name + (query ? '|' + query : ''));
             hash('/' + viewPrototype.join('/'));
 
             return app;
@@ -316,7 +302,7 @@ var app = (function (app) {
 				if (querystring.substr(0,1) == '?') {
 					query = $.deparam.querystring(querystring);
 				} else {
-					query = querystring;
+					query = decodeURIComponent(querystring);
 				}
 
 				states.push({
@@ -348,7 +334,7 @@ var app = (function (app) {
      * find required view
      * @param {String} needle view name
      * @param {String} haystack current evaled name
-     * @returns {Boolean?} deps
+     * @returns {Boolean} deps
      */
     function findRequiredView(needle, haystack) {
         if (needle === haystack) {
@@ -366,4 +352,19 @@ var app = (function (app) {
 
         return false;
     }
+
+    /** 
+     * to query string
+     * @param {Object} o
+     * @returns {String} stringified
+     */
+	function queryStringify(o) {
+		if ($.isPlainObject(o) || $.isArray(o)) {
+			return $.param.querystring('', o);
+		}
+		if (o) {
+			return encodeURIComponent(o);
+		}
+		return '';
+	}
 })($(window));
