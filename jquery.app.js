@@ -4,8 +4,7 @@
  * Copyright 2012, usp
  * Dual licensed under the MIT or GPL Version 2 licenses.
  *
- * The library requires jquery-ba-hashchange-js
- * http://benalman.com/code/projects/jquery-hashchange/docs/files/jquery-ba-hashchange-js.html
+ * The library requires jquery-bbq
  * thanks!!
  */
 
