@@ -16,7 +16,7 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 // define app
 var app = (function (app) {
     var views = {},
-        activeViews = [],
+        activeView,
         hashKey;
 
     app.extend({
@@ -24,10 +24,9 @@ var app = (function (app) {
          * add view
          * @param {String} name the view name
          * @param {jQuery} view the view 
-         * @param {int} priority the view's priority
          * @returns {jQuery} appself
          */
-        addView: function (name, view, priority) {
+        addView: function (name, view) {
             // closures for view
             var requires = [],
                 lastQuery,
@@ -56,30 +55,6 @@ var app = (function (app) {
                     }
                     requires.push(name);
                     return view;
-                },
-
-                /** 
-                 * getter of lastQuery
-                 * @returns {String} last querystring
-                 */
-                lastQuery: function () {
-                    return lastQuery;
-                },
-
-                /** 
-                 * getter of name
-                 * @returns {String} his name
-                 */
-                getName: function () {
-                    return name;
-                },
-
-                /** 
-                 * getter of priority
-                 * @returns {int} his priority
-                 */
-                getPriority: function () {
-                    return priority;
                 },
 
                 /** 
@@ -209,37 +184,6 @@ var app = (function (app) {
         },
 
         /** 
-         * unstage view and set hash
-         * @param {String} name view name
-         * @returns {jQuery} appself
-         */
-        unstage: function (name) {
-            var viewName,
-                leftView,
-                i = 0;
-
-            // remove matched view
-            for (; i < activeViews.length; i++) {
-                viewName = activeViews[i].getName();
-                if (findRequiredView(name, viewName)) {
-                    activeViews[i].deactivate();
-                    activeViews.splice(i, 1);
-                    i--;
-                }
-            }
-
-            // apply new hash
-            leftView = activeViews.sort(function (a, b) {
-                return a.getPriority() - b.getPriority();
-            })[0];
-            if (leftView) {
-                app.stage(leftView.getName(), leftView.lastQuery());
-            }
-
-            return app;
-        },
-
-        /** 
          * render views
          * @param {String} name the view's name
          * @param {Object} query passed to the view
@@ -249,24 +193,13 @@ var app = (function (app) {
             var i = 0,
                 view = app.getView(name);
 
-            // private view
-            if (view.getPriority() < 0) {
-                throw ('view name ' + name + ' is private.');
+            if (activeView) {
+                activeView.deactivate();
             }
-
-            // viewdeactivate
-            for (; i < activeViews.length; i++) {
-                if (activeViews[i].getPriority() <= view.getPriority()) {
-                    activeViews[i].deactivate();
-                    activeViews.splice(i, 1);
-                    i--;
-                }
-            }
-
-            // viewactivate and viewrender
             view.activate(name);
             view.render(query);
-            activeViews.push(view);
+
+            activeView = view;
         },
 
         /** 
