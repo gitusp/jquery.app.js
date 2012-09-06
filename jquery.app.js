@@ -220,7 +220,7 @@ var app = (function (app) {
 
             // remove matched view
             for (; i < activeViews.length; i++) {
-                viewName = activeViews.getName();
+                viewName = activeViews[i].getName();
                 if (findRequiredView(name, viewName)) {
                     activeViews[i].deactivate();
                     activeViews.splice(i, 1);
@@ -231,8 +231,10 @@ var app = (function (app) {
             // apply new hash
             leftView = activeViews.sort(function (a, b) {
                 return a.getPriority() - b.getPriority();
-            }).pop();
-            stage(leftView.getName(), leftView.lastQuery());
+            })[0];
+            if (leftView) {
+                app.stage(leftView.getName(), leftView.lastQuery());
+            }
 
             return app;
         },
@@ -254,7 +256,7 @@ var app = (function (app) {
 
             // viewdeactivate
             for (; i < activeViews.length; i++) {
-                if (activeViews[i].getPriority() < view.getPriority()) {
+                if (activeViews[i].getPriority() <= view.getPriority()) {
                     activeViews[i].deactivate();
                     activeViews.splice(i, 1);
                     i--;
@@ -283,7 +285,7 @@ var app = (function (app) {
         hashKey = setTimeout(function () {
             var listed = hash().split('/').pop().split('|'),
                 name = listed[0],
-                querystring = listed[1] || '';
+                querystring = listed[1] || '',
                 query;
 
             if (querystring.substr(0,1) == '?') {

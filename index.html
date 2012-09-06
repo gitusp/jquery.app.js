@@ -61,7 +61,7 @@ a:hover {
 
 var viewA = (function(){
 		var v = $( '<div id="viewA">viewA</div>' );
-		app.addView( 'viewA' , v , 'main' );
+		app.addView( 'viewA' , v , 1000 );
 
 		v.bind( 'viewactivate' , function( e ){
 			$( document.body ).append( v );
@@ -74,8 +74,7 @@ var viewA = (function(){
 	})(),
 	viewB = (function(){
 		var v = $( '<div id="viewB">viewB</div>' );
-		app.addView( 'viewB' , v , 'main' );
-		v.require( 'viewC' );
+		app.addView( 'viewB' , v , 1000 );
 
 		v.bind( 'viewactivate' , function( e ){
 			$( document.body ).append( v );
@@ -88,7 +87,7 @@ var viewA = (function(){
 	})(),
 	viewC = (function(){
 		var v = $( '<div id="viewC">viewC</div>' );
-		app.addView( 'viewC' , v , 'sub' );
+		app.addView( 'viewC' , v , 500 );
 
 		v.bind( 'viewactivate' , function( e ){
 			$( document.body ).append( v );
@@ -117,6 +116,6 @@ $( 'a' ).click( function( e ){
 } );
 
 // init
-app.init();
+//app.init();
 </script>
 </html>
