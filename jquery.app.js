@@ -141,7 +141,10 @@ var app = (function (app) {
 
             return app;
 
-            // internal viewdeactivate
+			/** 
+			 * activate the view
+			 * @param {Object} query feed
+			 */
             function viewdeactivate() {
                 deactivateKey = null;
                 if (!deactivateCancel) {
@@ -150,7 +153,11 @@ var app = (function (app) {
                 deactivateCancel = false;
             }
 
-            // internal viewactivate
+			/** 
+			 * deactivate the view
+			 * @param {String} name the view name
+			 * @param {Boolean} cancel is deactivate canceled
+			 */
             function viewactivate(name, cancel) {
                 activateKey = null;
                 if (!cancel) {
@@ -158,7 +165,10 @@ var app = (function (app) {
                 }
             }
 
-            // internal viewrender
+			/** 
+			 * render the view
+			 * @param {Object} query passed to the view
+			 */
             function viewrender(query) {
                 renderKey = null;
                 view.trigger('viewrender', query);
@@ -257,7 +267,7 @@ var app = (function (app) {
 
         /** 
          * render views
-         * @param {Array.<Object>} views collection of view and query
+         * @param {Array.<Object>} states collection of view and query
          * @returns {jQuery} appself
          */
         render: function (states) {
