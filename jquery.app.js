@@ -212,9 +212,12 @@ var app = (function (app) {
 
             // add new hash
             if ($.isPlainObject(query) || $.isArray(query)) {
-                query = JSON.stringify(query);
-            }
-            query = query ? '|' + encodeURIComponent(query) : '';
+                query = '|' + $.param.querystring('', query);
+            } else if (query) {
+				query = '|' + encodeURIComponent(query);
+			} else {
+				query = '';
+			}
             viewPrototype.push(name + query);
             hash('/' + viewPrototype.join('/'));
 
@@ -286,6 +289,8 @@ var app = (function (app) {
 			var statesBase = hash().split('/'),
 				states = [],
 				splited,
+				querystring,
+				query,
 				i = 0;
 
 			for (; i < statesBase.length; i++) {
@@ -296,13 +301,21 @@ var app = (function (app) {
                 }
 
 				splited = statesBase[i].split('|');
+				querystring = splited[1] || '';
+
+				if (querystring.substr(0,1) == '?') {
+					query = $.deparam.querystring(querystring);
+				} else {
+					query = querystring;
+				}
+
 				states.push({
 					name: splited[0],
-					query: $.parseQuery(splited[1] || '')
+					query: query
 				});
 			}
 
-            app.trigger('viewchange', states);
+            app.trigger('viewchange', [states]);
         }, 0);
     });
 

@@ -93,6 +93,9 @@ var viewA = (function(){
 		v.bind( 'viewactivate' , function( e ){
 			$( document.body ).append( v );
 		} );
+		v.bind( 'viewrender' , function( e, q ){
+			console.log(q);
+		} );
 		v.bind( 'viewdeactivate' , function( e ){
 			v.cut();
 		} );
@@ -113,6 +116,8 @@ $( 'a' ).click( function( e ){
 	}
 } );
 
-app.bind('viewchange', app.render);
+app.bind('viewchange', function (e, states){
+	app.render(states);
+});
 </script>
 </html>
