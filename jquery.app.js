@@ -252,31 +252,6 @@ var app = (function (app) {
         },
 
         /** 
-         * render views
-         * @param {Array.<Object>} states collection of view and query
-         * @returns {jQuery} appself
-         */
-        render: function (states) {
-            var i, view;
-
-            // viewdeactivate
-            for (i = 0; i < activeViews.length; i++) {
-                activeViews[i].deactivate();
-            }
-            activeViews = [];
-
-            // viewactivate and viewrender
-            for (i = 0; i < states.length; i++) {
-                view = app.getView(states[i].name);
-                view.activate(states[i].name);
-                view.render(states[i].query);
-                activeViews.push(view);
-            }
-
-            return app;
-        },
-
-        /** 
          * init app
          * @returns {jQuery} appself
          */
@@ -287,7 +262,6 @@ var app = (function (app) {
     });
 
     // default event binding
-    // NOTE: normally we bind app.render to viewchange evnet
     app.hashchange(function () {
         clearTimeout(hashKey);
         hashKey = setTimeout(function () {
@@ -323,6 +297,7 @@ var app = (function (app) {
             app.trigger('viewchange', [states]);
         }, 0);
     });
+    app.bind('viewchange', render);
 
     return app;
 
@@ -375,5 +350,28 @@ var app = (function (app) {
             return encodeURIComponent(o);
         }
         return '';
+    }
+
+    /** 
+     * render views
+     * @param {Array.<Object>} states collection of view and query
+     * @returns {jQuery} appself
+     */
+    function render(e, states) {
+        var i, view;
+
+        // viewdeactivate
+        for (i = 0; i < activeViews.length; i++) {
+            activeViews[i].deactivate();
+        }
+        activeViews = [];
+
+        // viewactivate and viewrender
+        for (i = 0; i < states.length; i++) {
+            view = app.getView(states[i].name);
+            view.activate(states[i].name);
+            view.render(states[i].query);
+            activeViews.push(view);
+        }
     }
 })($(window));
