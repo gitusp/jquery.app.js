@@ -116,8 +116,10 @@ $( 'a' ).click( function( e ){
 	}
 } );
 
+// init
 app.bind('viewchange', function (e, states){
 	app.render(states);
 });
+app.init();
 </script>
 </html>

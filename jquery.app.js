@@ -274,7 +274,16 @@ var app = (function (app) {
             }
 
             return app;
-        }
+        },
+
+        /** 
+         * init app
+         * @returns {jQuery} appself
+         */
+		init : function () {
+			app.hashchange();
+			return app;
+		}
     });
 
     // default event binding
