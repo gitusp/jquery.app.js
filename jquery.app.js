@@ -245,6 +245,10 @@ var app = (function (app) {
 
             // viewactivate and viewrender
             for (i = 0; i < states.length; i++) {
+                if (!getGroup(states[i].name)) {
+                    throw ('view name ' + states[i].name + ' is private.');
+                }
+
                 view = views[states[i].name];
                 view._activate(states[i].name);
                 view._render(states[i].query);
