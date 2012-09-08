@@ -356,7 +356,7 @@ var app = (function (app) {
     function getGroup(name) {
         var group;
         $.each(groups, function (k, v) {
-            if ($.grep(v, name) != -1) {
+            if ($.inArray(name, v) != -1) {
                 group = k;
             }
         });
