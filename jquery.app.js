@@ -1,3 +1,4 @@
+// TODO: viewは|区切りでクエリは?でつける(=が入ってたらkeyvalue形式)
 /*!
  * jQuery app framework
  *
@@ -17,6 +18,7 @@ $.event.special.viewrender = $.event.special.viewactivate = $.event.special.view
 var app = (function (app) {
     var views = {},
         activeViews = [],
+        groups,
         hashKey;
 
     app.extend({
@@ -24,10 +26,9 @@ var app = (function (app) {
          * add view
          * @param {String} name the view name
          * @param {jQuery} view the view 
-         * @param {String} group the view's group
          * @returns {jQuery} appself
          */
-        addView: function (name, view, group) {
+        addView: function (name, view) {
             // closures for view
             var requires = [],
                 lastQuery,
@@ -47,43 +48,40 @@ var app = (function (app) {
             view.extend({
                 /** 
                  * config or get require
-                 * @param {String?} name the view name
+                 * @param {jQuery || Vector.<jQuery>} required required views
                  * @returns {jQuery?} viewself
                  */
-                require: function (name) {
-                    if (name === undefined) {
+                require: function (required) {
+                    if (required === undefined) {
                         return requires;
                     }
-                    requires.push(name);
-                    return view;
-                },
 
-                /** 
-                 * getter of group
-                 * @returns {String} his group
-                 */
-                getGroup: function () {
-                    return group;
+                    if ($.isArray(required)) {
+                        requires.concat(required);
+                    } else {
+                        requires.push(required);
+                    }
+                    return view;
                 },
 
                 /** 
                  * view deactivator
                  */
-                deactivate: function () {
+                _deactivate: function () {
                     if (deactivateKey) {
                         return;
                     }
 
                     deactivateKey = setTimeout(viewdeactivate, 0);
                     for (var i = 0; i < requires.length; i++) {
-                        app.getView(requires[i]).deactivate();
+                        requires[i]._deactivate();
                     }
                 },
 
                 /** 
                  * view deactivator
                  */
-                activate: function (name) {
+                _activate: function (name) {
                     if (activateKey) {
                         return;
                     }
@@ -91,7 +89,7 @@ var app = (function (app) {
                     var cancel,
                         i = 0;
                     for (; i < requires.length; i++) {
-                        app.getView(requires[i]).activate(name);
+                        requires[i]._activate(name);
                     }
                     if (deactivateKey) {
                         cancel = deactivateCancel = true;
@@ -105,7 +103,7 @@ var app = (function (app) {
                  * render view
                  * @param {Object} query feed
                  */
-                render: function (query) {
+                _render: function (query) {
                     if (renderKey) {
                         return;
                     }
@@ -123,9 +121,7 @@ var app = (function (app) {
                     return;
                 }
 
-                setTimeout(function () {
-                    lastQuery = originalQuery;
-                }, 0);
+                lastQuery = originalQuery;
             });
             view.bind('viewdeactivate', function (e) {
                 lastQuery = undefined;
@@ -252,10 +248,37 @@ var app = (function (app) {
         },
 
         /** 
-         * init app
+         * render views
+         * @param {Array.<Object>} states collection of view and query
          * @returns {jQuery} appself
          */
-        init : function () {
+        render: function(states) {
+            var i, view;
+
+            // viewdeactivate
+            for (i = 0; i < activeViews.length; i++) {
+                activeViews[i]._deactivate();
+            }
+            activeViews = [];
+
+            // viewactivate and viewrender
+            for (i = 0; i < states.length; i++) {
+                view = app.getView(states[i].name);
+                view._activate(states[i].name);
+                view._render(states[i].query);
+                activeViews.push(view);
+            }
+
+            return app;
+        },
+
+        /** 
+         * init app
+         * @param {Object} g collection groups
+         * @returns {jQuery} appself
+         */
+        init : function (g) {
+            groups = g;
             app.hashchange();
             return app;
         }
@@ -297,7 +320,9 @@ var app = (function (app) {
             app.trigger('viewchange', [states]);
         }, 0);
     });
-    app.bind('viewchange', render);
+    app.bind('viewchange', function (e, states) {
+        app.render(states);
+    });
 
     return app;
 
@@ -325,7 +350,7 @@ var app = (function (app) {
             return true;
         }
 
-        var requires = app.getView(haystack).require(),
+        var requires = views[haystack].require(),
             i = 0;
 
         for (; i < requires.length; i++) {
@@ -350,28 +375,5 @@ var app = (function (app) {
             return encodeURIComponent(o);
         }
         return '';
-    }
-
-    /** 
-     * render views
-     * @param {Array.<Object>} states collection of view and query
-     * @returns {jQuery} appself
-     */
-    function render(e, states) {
-        var i, view;
-
-        // viewdeactivate
-        for (i = 0; i < activeViews.length; i++) {
-            activeViews[i].deactivate();
-        }
-        activeViews = [];
-
-        // viewactivate and viewrender
-        for (i = 0; i < states.length; i++) {
-            view = app.getView(states[i].name);
-            view.activate(states[i].name);
-            view.render(states[i].query);
-            activeViews.push(view);
-        }
     }
 })($(window));

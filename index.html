@@ -58,10 +58,9 @@ a:hover {
 <script src="jquery.app.js"></script>
 <script>
 
-
 var viewA = (function(){
 		var v = $( '<div id="viewA">viewA</div>' );
-		app.addView( 'viewA' , v , 'main' );
+		app.addView( 'viewA' , v );
 
 		v.bind( 'viewactivate' , function( e ){
 			$( document.body ).append( v );
@@ -74,8 +73,7 @@ var viewA = (function(){
 	})(),
 	viewB = (function(){
 		var v = $( '<div id="viewB">viewB</div>' );
-		app.addView( 'viewB' , v , 'main' );
-		v.require( 'viewC' );
+		app.addView( 'viewB' , v );
 
 		v.bind( 'viewactivate' , function( e ){
 			$( document.body ).append( v );
@@ -88,7 +86,8 @@ var viewA = (function(){
 	})(),
 	viewC = (function(){
 		var v = $( '<div id="viewC">viewC</div>' );
-		app.addView( 'viewC' , v , 'sub' );
+		app.addView( 'viewC' , v );
+		v.require( viewB );
 
 		v.bind( 'viewactivate' , function( e ){
 			$( document.body ).append( v );
@@ -108,15 +107,18 @@ $( 'a' ).click( function( e ){
 	var that = $( this ),
 		name = that.html(),
 		view = app.getView( name );
+
 	if ( view.is( ':visible' ) ) {
 		app.unstage( name );
-	}
-	else {
+	} else {
 		app.stage( name );
 	}
 } );
 
 // init
-app.init();
+app.init({
+    main: ['viewA', 'viewB'],
+    sub: ['viewC']
+});
 </script>
 </html>
