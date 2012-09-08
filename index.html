@@ -106,12 +106,28 @@ var viewA = (function(){
 $( 'a' ).click( function( e ){
 	var that = $( this ),
 		name = that.html(),
-		view = app.getView( name );
+        group,
+        view;
+
+    switch (name) {
+        case 'viewA' :
+            view = viewA;
+            group = 'main';
+            break;
+        case 'viewB' :
+            view = viewB;
+            group = 'main';
+            break;
+        case 'viewC' : 
+            view = viewC;
+            group = 'sub';
+            break;
+    }
 
 	if ( view.is( ':visible' ) ) {
-		app.unstage( name );
+		app.unstage(group);
 	} else {
-		app.stage( name );
+		app.stage(name);
 	}
 } );
 

@@ -46,6 +46,14 @@ var app = (function (app) {
             // expand view
             view.extend({
                 /** 
+                 * getter of his name
+                 * @returns {String} the name
+                 */
+                getName: function () {
+                    return name;
+                },
+
+                /** 
                  * config or get require
                  * @param {jQuery || Vector.<jQuery>} required required views
                  * @returns {jQuery?} viewself
@@ -204,10 +212,10 @@ var app = (function (app) {
 
         /** 
          * unstage view and set hash
-         * @param {String} name view name
+         * @param {String} group
          * @returns {jQuery} appself
          */
-        unstage: function (name) {
+        unstage: function (group) {
             var viewName,
                 viewPrototype = hash().split('|'),
                 i = 0;
@@ -221,8 +229,7 @@ var app = (function (app) {
                 }
 
                 viewName = viewPrototype[i].split('?')[0];
-                // TODO: do something
-                if (findRequiredView(name, viewName)) {
+                if (getGroup(viewName) == group) {
                     viewPrototype.splice(i, 1);
                     i--;
                 }
