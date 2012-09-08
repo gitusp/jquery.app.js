@@ -1,4 +1,3 @@
-// TODO: viewは|区切りでクエリは?でつける(=が入ってたらkeyvalue形式)
 /*!
  * jQuery app framework
  *
@@ -164,29 +163,16 @@ var app = (function (app) {
         },
 
         /** 
-         * get view
-         * @param {String} name the view name
-         * @returns {jQuery} the view
-         */
-        getView: function (name) {
-            if (!views[name]) {
-                throw ('view name ' + name + ' not exists.');
-            }
-
-            return views[name];
-        },
-
-        /** 
          * stage view and set hash
          * @param {String} name view name
          * @param {Object} query passed to view
          * @returns {jQuery} appself
          */
         stage: function (name, query) {
-            var viewName,
-                group = app.getView(name).getGroup(),
-                viewPrototype = hash().split('/'),
-                i = 0;
+            var group = getGroup(name),
+                viewPrototype = hash().split('|'),
+                i = 0,
+                viewName;
 
             // private view
             if (!group) {
@@ -201,8 +187,8 @@ var app = (function (app) {
                     continue;
                 }
 
-                viewName = viewPrototype[i].split('|')[0];
-                if (app.getView(viewName).getGroup() === group) {
+                viewName = viewPrototype[i].split('?')[0];
+                if (getGroup(viewName) == group) {
                     viewPrototype.splice(i, 1);
                     i--;
                 }
@@ -210,8 +196,8 @@ var app = (function (app) {
 
             // add new hash
             query = queryStringify(query);
-            viewPrototype.push(name + (query ? '|' + query : ''));
-            hash('/' + viewPrototype.join('/'));
+            viewPrototype.push(name + (query ? '?' + query : ''));
+            hash('|' + viewPrototype.join('|'));
 
             return app;
         },
@@ -223,7 +209,7 @@ var app = (function (app) {
          */
         unstage: function (name) {
             var viewName,
-                viewPrototype = hash().split('/'),
+                viewPrototype = hash().split('|'),
                 i = 0;
 
             // remove matched view
@@ -234,7 +220,8 @@ var app = (function (app) {
                     continue;
                 }
 
-                viewName = viewPrototype[i].split('|')[0];
+                viewName = viewPrototype[i].split('?')[0];
+                // TODO: do something
                 if (findRequiredView(name, viewName)) {
                     viewPrototype.splice(i, 1);
                     i--;
@@ -242,7 +229,7 @@ var app = (function (app) {
             }
 
             // apply new hash
-            hash('/' + viewPrototype.join('/'));
+            hash('|' + viewPrototype.join('|'));
 
             return app;
         },
@@ -263,7 +250,7 @@ var app = (function (app) {
 
             // viewactivate and viewrender
             for (i = 0; i < states.length; i++) {
-                view = app.getView(states[i].name);
+                view = views[states[i].name];
                 view._activate(states[i].name);
                 view._render(states[i].query);
                 activeViews.push(view);
@@ -288,7 +275,7 @@ var app = (function (app) {
     app.hashchange(function () {
         clearTimeout(hashKey);
         hashKey = setTimeout(function () {
-            var statesBase = hash().split('/'),
+            var statesBase = hash().split('|'),
                 states = [],
                 splited,
                 querystring,
@@ -302,11 +289,11 @@ var app = (function (app) {
                     continue;
                 }
 
-                splited = statesBase[i].split('|');
+                splited = statesBase[i].split('?');
                 querystring = splited[1] || '';
 
-                if (querystring.substr(0,1) == '?') {
-                    query = $.deparam.querystring(querystring);
+                if (querystring.indexOf('=') != -1) {
+                    query = $.deparam.querystring('?' + querystring);
                 } else {
                     query = decodeURIComponent(querystring);
                 }
@@ -327,7 +314,7 @@ var app = (function (app) {
     return app;
 
     /** 
-     * handle hash
+     * treat hash
      * @param {String} hash if be feed then set hash, or return hash
      * @returns {String?} current hash
      */
@@ -340,40 +327,32 @@ var app = (function (app) {
     }
 
     /** 
-     * find required view
-     * @param {String} needle view name
-     * @param {String} haystack current evaled name
-     * @returns {Boolean} deps
-     */
-    function findRequiredView(needle, haystack) {
-        if (needle === haystack) {
-            return true;
-        }
-
-        var requires = views[haystack].require(),
-            i = 0;
-
-        for (; i < requires.length; i++) {
-            if (findRequiredView(needle, requires[i])) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /** 
      * to query string
      * @param {Object} o
      * @returns {String} stringified
      */
     function queryStringify(o) {
         if ($.isPlainObject(o) || $.isArray(o)) {
-            return $.param.querystring('', o);
+            return $.param.querystring('', o).substr(1);
         }
         if (o) {
             return encodeURIComponent(o);
         }
         return '';
+    }
+
+    /** 
+     * group getter
+     * @param {String} name
+     * @returns {String} group
+     */
+    function getGroup(name) {
+        var group;
+        $.each(groups, function (k, v) {
+            if ($.grep(v, name) != -1) {
+                group = k;
+            }
+        });
+        return group || false;
     }
 })($(window));
