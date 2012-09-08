@@ -114,9 +114,7 @@ var app = (function (app) {
                     return;
                 }
 
-                setTimeout(function () {
-                    lastQuery = originalQuery;
-                }, 0);
+                lastQuery = originalQuery;
             });
             view.bind('viewdeactivate', function (e) {
                 lastQuery = undefined;
@@ -125,8 +123,7 @@ var app = (function (app) {
             return app;
 
             /** 
-             * activate the view
-             * @param {Object} query feed
+             * deactivate the view
              */
             function viewdeactivate() {
                 deactivateKey = null;
@@ -137,7 +134,7 @@ var app = (function (app) {
             }
 
             /** 
-             * deactivate the view
+             * activate the view
              * @param {String} name the view name
              * @param {Boolean} cancel is deactivate canceled
              */
