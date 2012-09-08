@@ -46,17 +46,9 @@ var app = (function (app) {
             // expand view
             view.extend({
                 /** 
-                 * getter of his name
-                 * @returns {String} the name
-                 */
-                getName: function () {
-                    return name;
-                },
-
-                /** 
                  * config or get require
                  * @param {jQuery || Vector.<jQuery>} required required views
-                 * @returns {jQuery?} viewself
+                 * @returns {Array || jQuery}
                  */
                 require: function (required) {
                     if (required === undefined) {
@@ -179,8 +171,7 @@ var app = (function (app) {
         stage: function (name, query) {
             var group = getGroup(name),
                 viewPrototype = hash().split('|'),
-                i = 0,
-                viewName;
+                i = 0;
 
             // private view
             if (!group) {
@@ -195,8 +186,7 @@ var app = (function (app) {
                     continue;
                 }
 
-                viewName = viewPrototype[i].split('?')[0];
-                if (getGroup(viewName) == group) {
+                if (getGroup(viewPrototype[i].split('?')[0]) == group) {
                     viewPrototype.splice(i, 1);
                     i--;
                 }
@@ -216,8 +206,7 @@ var app = (function (app) {
          * @returns {jQuery} appself
          */
         unstage: function (group) {
-            var viewName,
-                viewPrototype = hash().split('|'),
+            var viewPrototype = hash().split('|'),
                 i = 0;
 
             // remove matched view
@@ -228,8 +217,7 @@ var app = (function (app) {
                     continue;
                 }
 
-                viewName = viewPrototype[i].split('?')[0];
-                if (getGroup(viewName) == group) {
+                if (getGroup(viewPrototype[i].split('?')[0]) == group) {
                     viewPrototype.splice(i, 1);
                     i--;
                 }
