@@ -23,11 +23,11 @@ var app = (function (app) {
     app.extend({
         /** 
          * add view
-         * @param {String} name the view name
          * @param {jQuery} view the view 
+         * @param {String} name the view name
          * @returns {jQuery} appself
          */
-        addView: function (name, view) {
+        addView: function (view, name) {
             // closures for view
             var requires = [],
                 lastQuery,
@@ -35,13 +35,6 @@ var app = (function (app) {
                 activateKey = null,
                 renderKey = null,
                 deactivateCancel = false;
-
-            // register view
-            if (views[name]) {
-                throw ('view name ' + name + ' already exists.');
-            } else {
-                views[name] = view;
-            }
 
             // expand view
             view.extend({
@@ -111,6 +104,18 @@ var app = (function (app) {
                     }, 0);
                 }
             });
+
+            // public view only
+            if (!name) {
+                return app;
+            }
+
+            // save view
+            if (views[name]) {
+                throw ('view name ' + name + ' already exists.');
+            } else {
+                views[name] = view;
+            }
 
             // default handler of view
             view.bind('viewrender', function (e, query) {
